@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user.dart' as app_models;
 import '../models/user_role.dart';
 import '../models/assessment.dart';
 import '../models/question.dart';
+import '../models/assessment_template.dart';
 
 class SupabaseService {
   // Get Supabase client (following official pattern)
@@ -133,12 +135,33 @@ class SupabaseService {
     if (!isAvailable) {
       throw Exception('Supabase is not available');
     }
+    
+    // Create insert map WITHOUT id field (PostgreSQL will auto-generate it via SERIAL)
+    // Explicitly build the map without id to avoid any null issues
+    final insertMap = <String, dynamic>{
+      'question_text': question.text,
+      'question_type': question.type.name,
+      'options': question.options != null ? question.options!.join('|||') : null,
+      'required': question.required,
+      'category': question.category,
+      'order_index': question.order,
+      'is_active': question.isActive,
+      'created_by': question.createdBy,
+      'created_at': question.createdAt.toIso8601String(),
+      'updated_at': question.updatedAt.toIso8601String(),
+    };
+    
+    // Debug: Verify id is NOT in the map
+    debugPrint('🔵 Inserting question - Map keys: ${insertMap.keys}');
+    debugPrint('🔵 Inserting question - Has id key? ${insertMap.containsKey('id')}');
+    
     final response = await client!
         .from('questions')
-        .insert(question.toMap())
+        .insert(insertMap)
         .select()
         .single();
     
+    debugPrint('✅ Question inserted successfully with id: ${response['id']}');
     return response['id'] as int;
   }
 
@@ -271,6 +294,210 @@ class SupabaseService {
     }
   }
 
+  // ========== ASSESSMENT TEMPLATES ==========
+  
+  Future<List<AssessmentTemplate>> getAllTemplates() async {
+    if (!isAvailable) return [];
+    try {
+      final response = await client!
+          .from('assessment_templates')
+          .select()
+          .eq('is_active', true)
+          .order('created_at', ascending: false);
+      
+      return (response as List)
+          .map((item) => AssessmentTemplate.fromMap(item))
+          .toList();
+    } catch (e) {
+      debugPrint('Error getting templates: $e');
+      return [];
+    }
+  }
+  
+  Future<AssessmentTemplate?> getTemplateWithQuestions(int templateId) async {
+    if (!isAvailable) return null;
+    try {
+      // Get template
+      final templateResponse = await client!
+          .from('assessment_templates')
+          .select()
+          .eq('id', templateId)
+          .single();
+      
+      final template = AssessmentTemplate.fromMap(templateResponse);
+      
+      // Get questions for this template
+      final questionsResponse = await client!
+          .from('assessment_template_questions')
+          .select('''
+            question_id,
+            order_index,
+            questions (*)
+          ''')
+          .eq('template_id', templateId)
+          .order('order_index', ascending: true);
+      
+      final questions = <Question>[];
+      for (var item in questionsResponse) {
+        if (item['questions'] != null) {
+          questions.add(Question.fromMap(item['questions']));
+        }
+      }
+      
+      return template.copyWith(questions: questions);
+    } catch (e) {
+      debugPrint('Error getting template with questions: $e');
+      return null;
+    }
+  }
+  
+  Future<int> createTemplate(AssessmentTemplate template) async {
+    if (!isAvailable) {
+      throw Exception('Supabase is not available');
+    }
+    
+    final insertMap = <String, dynamic>{
+      'name': template.name,
+      'description': template.description,
+      'is_active': template.isActive,
+      'created_by': template.createdBy,
+    };
+    
+    final response = await client!
+        .from('assessment_templates')
+        .insert(insertMap)
+        .select()
+        .single();
+    
+    return response['id'] as int;
+  }
+  
+  Future<void> updateTemplate(AssessmentTemplate template) async {
+    if (!isAvailable || template.id == null) return;
+    
+    final updateMap = <String, dynamic>{
+      'name': template.name,
+      'description': template.description,
+      'is_active': template.isActive,
+      'updated_at': DateTime.now().toIso8601String(),
+    };
+    
+    await client!
+        .from('assessment_templates')
+        .update(updateMap)
+        .eq('id', template.id!);
+  }
+  
+  Future<void> deleteTemplate(int templateId) async {
+    if (!isAvailable) return;
+    await client!
+        .from('assessment_templates')
+        .update({'is_active': false})
+        .eq('id', templateId);
+  }
+  
+  Future<void> addQuestionToTemplate(int templateId, int questionId, int orderIndex) async {
+    if (!isAvailable) return;
+    
+    await client!
+        .from('assessment_template_questions')
+        .insert({
+          'template_id': templateId,
+          'question_id': questionId,
+          'order_index': orderIndex,
+        });
+  }
+  
+  Future<void> removeQuestionFromTemplate(int templateId, int questionId) async {
+    if (!isAvailable) return;
+    
+    await client!
+        .from('assessment_template_questions')
+        .delete()
+        .eq('template_id', templateId)
+        .eq('question_id', questionId);
+  }
+  
+  Future<void> updateTemplateQuestionOrder(int templateId, List<int> questionIds) async {
+    if (!isAvailable) return;
+    
+    // Delete all existing links
+    await client!
+        .from('assessment_template_questions')
+        .delete()
+        .eq('template_id', templateId);
+    
+    // Re-insert with new order
+    for (int i = 0; i < questionIds.length; i++) {
+      await client!
+          .from('assessment_template_questions')
+          .insert({
+            'template_id': templateId,
+            'question_id': questionIds[i],
+            'order_index': i,
+          });
+    }
+  }
+  
+  // ========== QUESTION RESPONSES ==========
+  
+  Future<void> saveQuestionResponse({
+    required int templateId,
+    required int questionId,
+    required String patientUserId,
+    required String answer,
+    int? assessmentId,
+  }) async {
+    if (!isAvailable) return;
+    
+    final insertMap = <String, dynamic>{
+      'template_id': templateId,
+      'question_id': questionId,
+      'patient_user_id': patientUserId,
+      'answer': answer,
+    };
+    
+    if (assessmentId != null) {
+      insertMap['assessment_id'] = assessmentId;
+    }
+    
+    await client!
+        .from('question_responses')
+        .insert(insertMap);
+  }
+  
+  Future<List<Map<String, dynamic>>> getQuestionResponses({
+    int? templateId,
+    String? patientUserId,
+    int? assessmentId,
+  }) async {
+    if (!isAvailable) return [];
+    
+    try {
+      var query = client!.from('question_responses').select('''
+        *,
+        questions (*),
+        assessment_templates (name, description)
+      ''');
+      
+      if (templateId != null) {
+        query = query.eq('template_id', templateId);
+      }
+      if (patientUserId != null) {
+        query = query.eq('patient_user_id', patientUserId);
+      }
+      if (assessmentId != null) {
+        query = query.eq('assessment_id', assessmentId);
+      }
+      
+      final response = await query.order('created_at', ascending: false);
+      return (response as List).cast<Map<String, dynamic>>();
+    } catch (e) {
+      debugPrint('Error getting question responses: $e');
+      return [];
+    }
+  }
+  
   // ========== REAL-TIME SUBSCRIPTIONS ==========
   
   RealtimeChannel? subscribeToAssessments(Function(Map<String, dynamic>) callback) {

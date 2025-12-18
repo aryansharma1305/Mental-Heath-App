@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:sqflite/sqflite.dart';
 import '../models/question.dart';
 import '../models/assessment.dart';
 import '../services/question_service.dart';
+import '../services/supabase_service.dart';
 import '../services/database_service.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
@@ -11,7 +13,9 @@ import '../widgets/custom_widgets.dart';
 import 'package:intl/intl.dart';
 
 class PatientAssessmentScreen extends StatefulWidget {
-  const PatientAssessmentScreen({super.key});
+  final int templateId;
+  
+  const PatientAssessmentScreen({super.key, required this.templateId});
 
   @override
   State<PatientAssessmentScreen> createState() => _PatientAssessmentScreenState();
@@ -21,6 +25,7 @@ class _PatientAssessmentScreenState extends State<PatientAssessmentScreen> {
   final _formKey = GlobalKey<FormState>();
   final _pageController = PageController();
   final QuestionService _questionService = QuestionService();
+  final SupabaseService _supabaseService = SupabaseService();
   final DatabaseService _databaseService = DatabaseService();
   final AuthService _authService = AuthService();
 
@@ -38,11 +43,37 @@ class _PatientAssessmentScreenState extends State<PatientAssessmentScreen> {
 
   Future<void> _loadQuestions() async {
     try {
-      final questions = await _questionService.getActiveQuestions();
-      setState(() {
-        _questions = questions;
-        _isLoading = false;
-      });
+      // Load questions from the selected assessment template
+      if (SupabaseService.isAvailable) {
+        final template = await _supabaseService.getTemplateWithQuestions(widget.templateId);
+        if (template != null && template.questions != null) {
+          setState(() {
+            _questions = template.questions!;
+            _isLoading = false;
+          });
+        } else {
+          setState(() => _isLoading = false);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Assessment template not found or has no questions.'),
+                backgroundColor: AppTheme.errorRed,
+              ),
+            );
+            Navigator.pop(context);
+          }
+        }
+      } else {
+        setState(() => _isLoading = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Unable to connect to server. Please try again later.'),
+              backgroundColor: AppTheme.errorRed,
+            ),
+          );
+        }
+      }
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
@@ -54,11 +85,54 @@ class _PatientAssessmentScreenState extends State<PatientAssessmentScreen> {
   }
 
   void _nextPage() {
+    // Validate current question before moving forward
+    final currentQuestion = _questions[_currentPage];
+    
+    // Check if required question is answered
+    if (currentQuestion.required) {
+      final response = _responses[currentQuestion.questionId];
+      if (response == null || response.toString().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please answer this required question before continuing.'),
+            backgroundColor: AppTheme.errorRed,
+          ),
+        );
+        return;
+      }
+    }
+    
+    // Save response and move to next page
     if (_currentPage < _questions.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
+    }
+  }
+  
+  void _handleNextOrSubmit() {
+    // Validate current question
+    final currentQuestion = _questions[_currentPage];
+    
+    if (currentQuestion.required) {
+      final response = _responses[currentQuestion.questionId];
+      if (response == null || response.toString().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please answer this required question.'),
+            backgroundColor: AppTheme.errorRed,
+          ),
+        );
+        return;
+      }
+    }
+    
+    // If last question, submit; otherwise, go to next
+    if (_currentPage == _questions.length - 1) {
+      _submitAssessment();
+    } else {
+      _nextPage();
     }
   }
 
@@ -87,35 +161,39 @@ class _PatientAssessmentScreenState extends State<PatientAssessmentScreen> {
         throw Exception('User not found');
       }
 
-      final assessment = Assessment(
-        patientId: currentUser.id,
-        patientName: currentUser.fullName,
-        assessmentDate: DateTime.now(),
-        assessorName: currentUser.fullName,
-        assessorRole: currentUser.role.displayName,
-        decisionContext: 'Self-assessment',
-        responses: _responses,
-        overallCapacity: 'Pending Review',
-        recommendations: '',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-
-      await _databaseService.insertAssessment(assessment);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Assessment submitted successfully! A healthcare professional will review it.'),
-            backgroundColor: AppTheme.accentGreen,
-          ),
-        );
-        Navigator.pop(context, true);
+      // Save each response to question_responses table in Supabase
+      if (SupabaseService.isAvailable) {
+        for (var question in _questions) {
+          final response = _responses[question.questionId];
+          if (response != null && question.id != null) {
+            await _supabaseService.saveQuestionResponse(
+              templateId: widget.templateId,
+              questionId: question.id!,
+              patientUserId: currentUser.id,
+              answer: response.toString(),
+            );
+          }
+        }
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Assessment submitted successfully! A healthcare professional will review it.'),
+              backgroundColor: AppTheme.accentGreen,
+            ),
+          );
+          Navigator.pop(context, true);
+        }
+      } else {
+        throw Exception('Unable to connect to server. Please check your internet connection.');
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error submitting assessment: $e')),
+          SnackBar(
+            content: Text('Error submitting assessment: $e'),
+            backgroundColor: AppTheme.errorRed,
+          ),
         );
       }
     } finally {
@@ -146,19 +224,6 @@ class _PatientAssessmentScreenState extends State<PatientAssessmentScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mental Capacity Assessment'),
-        actions: [
-          if (_currentPage == _questions.length - 1)
-            TextButton(
-              onPressed: _isSubmitting ? null : _submitAssessment,
-              child: _isSubmitting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Submit', style: TextStyle(color: Colors.white)),
-            ),
-        ],
       ),
       body: Form(
         key: _formKey,
@@ -184,6 +249,7 @@ class _PatientAssessmentScreenState extends State<PatientAssessmentScreen> {
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
+                physics: const NeverScrollableScrollPhysics(), // Disable swipe - only button navigation
                 onPageChanged: (page) => setState(() => _currentPage = page),
                 itemCount: _questions.length,
                 itemBuilder: (context, index) {
@@ -197,21 +263,57 @@ class _PatientAssessmentScreenState extends State<PatientAssessmentScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  // Previous button
                   if (_currentPage > 0)
-                    ElevatedButton(
-                      onPressed: _previousPage,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey,
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _previousPage,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey[600],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                        child: const Text('Previous'),
                       ),
-                      child: const Text('Previous'),
                     )
                   else
                     const SizedBox(),
-                  if (_currentPage < _questions.length - 1)
-                    ElevatedButton(
-                      onPressed: _nextPage,
-                      child: const Text('Next'),
+                  
+                  // Spacing between buttons
+                  if (_currentPage > 0) const SizedBox(width: 16),
+                  
+                  // Next or Submit button
+                  Expanded(
+                    flex: _currentPage > 0 ? 1 : 2,
+                    child: ElevatedButton(
+                      onPressed: _isSubmitting ? null : _handleNextOrSubmit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _currentPage == _questions.length - 1
+                            ? AppTheme.accentGreen
+                            : AppTheme.primaryBlue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: _isSubmitting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : Text(
+                              _currentPage == _questions.length - 1
+                                  ? 'Submit Assessment'
+                                  : 'Next',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                     ),
+                  ),
                 ],
               ),
             ),

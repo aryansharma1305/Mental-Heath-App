@@ -11,6 +11,7 @@ import 'new_assessment_screen.dart';
 import 'assessment_list_screen.dart';
 import 'assessment_detail_screen.dart';
 import 'patient_assessment_screen.dart';
+import 'select_assessment_screen.dart';
 import 'doctor_review_screen.dart';
 import 'admin_panel_screen.dart';
 import 'profile_screen.dart';
@@ -140,7 +141,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       floatingActionButton: _buildFloatingButton(),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
-  }
+              }
 
   Widget _buildHeader() {
     return Container(
@@ -181,7 +182,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                     color: AppTheme.textDark,
-                  ),
+                        ),
                 ).animate().fadeIn().slideX(begin: -0.2, end: 0),
                 Row(
                   children: [
@@ -207,8 +208,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ],
                 ).animate().fadeIn(delay: 200.ms),
               ],
-            ),
-          ),
+                        ),
+                      ),
           
           // Notification Icon
           Container(
@@ -235,13 +236,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         minHeight: 8,
                       ),
                     ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
               onPressed: () {
                 // TODO: Show notifications
               },
-            ),
+              ),
           ).animate().scale(delay: 400.ms),
         ],
       ),
@@ -255,7 +256,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 8),
-          
+
           // Date Card with Floating Animation
           AnimatedBuilder(
             animation: _floatingController,
@@ -363,8 +364,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     color: AppTheme.primaryColor,
                   ),
                 ),
-              ),
-            ],
+                  ),
+                ],
           ).animate().fadeIn(delay: 800.ms),
           
               const SizedBox(height: 16),
@@ -419,14 +420,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           'icon': Icons.assignment_outlined,
           'title': 'Take Assessment',
           'subtitle': 'Answer questionnaire',
-          'onTap': () async {
-            final result = await Navigator.push(
+          'onTap': () {
+            Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => const PatientAssessmentScreen(),
+                builder: (context) => const SelectAssessmentScreen(),
               ),
             );
-            if (result == true) _loadDashboardData();
           },
         },
         {
@@ -680,13 +680,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ),
         onPressed: () async {
           if (_userRole == UserRole.patient) {
-            final result = await Navigator.push(
+            Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => const PatientAssessmentScreen(),
+                builder: (context) => const SelectAssessmentScreen(),
               ),
             );
-            if (result == true) _loadDashboardData();
           } else if (_userRole == UserRole.admin) {
             Navigator.push(
               context,
@@ -766,7 +765,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 label: 'Logout',
                 isSelected: false,
                 onTap: _logout,
-              ),
+                ),
             ],
           ),
         ),
@@ -921,7 +920,7 @@ class _AssessmentCard extends StatelessWidget {
                         style: GoogleFonts.inter(
                   fontSize: 12,
                           color: AppTheme.textGrey,
-                        ),
+                ),
                       ),
                     ],
                   ),
@@ -937,8 +936,8 @@ class _AssessmentCard extends StatelessWidget {
                     size: 14,
                     color: _getStatusColor(assessment.overallCapacity),
                   ),
-                ),
-              ],
+              ),
+            ],
             ),
           ),
         ),

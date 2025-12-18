@@ -99,8 +99,8 @@ class _SplashScreenState extends State<SplashScreen>
         ),
         child: SafeArea(
           child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
             children: [
               const Spacer(flex: 2),
@@ -203,7 +203,7 @@ class _SplashScreenState extends State<SplashScreen>
                 child: Stack(
                   children: [
                     Container(
-                      decoration: BoxDecoration(
+                  decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
                             Colors.white.withOpacity(0.8),
@@ -212,8 +212,8 @@ class _SplashScreenState extends State<SplashScreen>
                           ],
                         ),
                         borderRadius: BorderRadius.circular(3),
-                      ),
-                    ).animate(onPlay: (controller) => controller.repeat())
+                  ),
+                ).animate(onPlay: (controller) => controller.repeat())
                         .slideX(
                           duration: 2000.ms,
                           begin: -1,

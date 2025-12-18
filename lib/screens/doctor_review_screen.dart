@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../models/assessment.dart';
-import '../services/database_service.dart';
+import '../services/supabase_service.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_widgets.dart';
-import 'assessment_detail_screen.dart';
 
 class DoctorReviewScreen extends StatefulWidget {
   const DoctorReviewScreen({super.key});
@@ -15,147 +14,57 @@ class DoctorReviewScreen extends StatefulWidget {
 }
 
 class _DoctorReviewScreenState extends State<DoctorReviewScreen> {
-  final DatabaseService _databaseService = DatabaseService();
+  final SupabaseService _supabaseService = SupabaseService();
   final AuthService _authService = AuthService();
   
-  List<Assessment> _pendingAssessments = [];
-  List<Assessment> _reviewedAssessments = [];
+  List<Map<String, dynamic>> _allResponses = [];
+  Map<int, List<Map<String, dynamic>>> _responsesByTemplate = {};
+  Map<String, Map<String, dynamic>> _responsesByPatient = {};
   bool _isLoading = true;
-  int _selectedTab = 0; // 0 = Pending, 1 = Reviewed
+  int _selectedTab = 0; // 0 = By Template, 1 = By Patient
 
   @override
   void initState() {
     super.initState();
-    _loadAssessments();
+    _loadResponses();
   }
 
-  Future<void> _loadAssessments() async {
+  Future<void> _loadResponses() async {
     setState(() => _isLoading = true);
     try {
-      final allAssessments = await _databaseService.getAllAssessments();
-      setState(() {
-        _pendingAssessments = allAssessments
-            .where((a) => a.overallCapacity == 'Pending Review')
-            .toList();
-        _reviewedAssessments = allAssessments
-            .where((a) => a.overallCapacity != 'Pending Review')
-            .toList();
-        _isLoading = false;
-      });
+      if (SupabaseService.isAvailable) {
+        _allResponses = await _supabaseService.getQuestionResponses();
+        
+        // Group by template
+        _responsesByTemplate = {};
+        for (var response in _allResponses) {
+          final templateId = response['template_id'] as int?;
+          if (templateId != null) {
+            _responsesByTemplate.putIfAbsent(templateId, () => []).add(response);
+          }
+        }
+        
+        // Group by patient
+        _responsesByPatient = {};
+        for (var response in _allResponses) {
+          final patientId = response['patient_user_id'] as String?;
+          if (patientId != null) {
+            final key = patientId;
+            if (!_responsesByPatient.containsKey(key)) {
+              _responsesByPatient[key] = {
+                'patient_id': patientId,
+                'responses': <Map<String, dynamic>>[],
+              };
+            }
+            (_responsesByPatient[key]!['responses'] as List).add(response);
+          }
+        }
+      }
     } catch (e) {
+      debugPrint('Error loading responses: $e');
+    } finally {
       setState(() => _isLoading = false);
     }
-  }
-
-  Future<void> _reviewAssessment(Assessment assessment, String capacity, String recommendations) async {
-    try {
-      final currentUser = await _authService.getCurrentUserModel();
-      if (currentUser == null) return;
-
-      final updatedAssessment = Assessment(
-        id: assessment.id,
-        patientId: assessment.patientId,
-        patientName: assessment.patientName,
-        assessmentDate: assessment.assessmentDate,
-        assessorName: assessment.assessorName,
-        assessorRole: assessment.assessorRole,
-        decisionContext: assessment.decisionContext,
-        responses: assessment.responses,
-        overallCapacity: capacity,
-        recommendations: recommendations,
-        createdAt: assessment.createdAt,
-        updatedAt: DateTime.now(),
-      );
-
-      await _databaseService.updateAssessment(updatedAssessment);
-      await _loadAssessments();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Assessment reviewed successfully'),
-            backgroundColor: AppTheme.accentGreen,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error reviewing assessment: $e')),
-        );
-      }
-    }
-  }
-
-  void _showReviewDialog(Assessment assessment) {
-    final capacityController = TextEditingController();
-    final recommendationsController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Review Assessment - ${assessment.patientName}'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Overall Capacity:', style: AppTheme.labelLarge),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                ),
-                items: [
-                  'Has capacity for this decision',
-                  'Lacks capacity for this decision',
-                  'Fluctuating capacity - reassessment needed',
-                  'Undetermined - more information needed',
-                ].map((option) {
-                  return DropdownMenuItem(
-                    value: option,
-                    child: Text(option),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  capacityController.text = value ?? '';
-                },
-              ),
-              const SizedBox(height: 16),
-              Text('Recommendations:', style: AppTheme.labelLarge),
-              const SizedBox(height: 8),
-              TextField(
-                controller: recommendationsController,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  hintText: 'Enter recommendations...',
-                ),
-                maxLines: 4,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (capacityController.text.isNotEmpty) {
-                _reviewAssessment(
-                  assessment,
-                  capacityController.text,
-                  recommendationsController.text,
-                );
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Submit Review'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -163,127 +72,111 @@ class _DoctorReviewScreenState extends State<DoctorReviewScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Review Assessments'),
+        bottom: TabBar(
+          onTap: (index) => setState(() => _selectedTab = index),
+          tabs: const [
+            Tab(icon: Icon(Icons.assignment), text: 'By Assessment'),
+            Tab(icon: Icon(Icons.person), text: 'By Patient'),
+          ],
+        ),
       ),
-      body: Column(
-        children: [
-          // Tabs
-          Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _selectedTab = 0),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: _selectedTab == 0
-                          ? AppTheme.primaryBlue
-                          : Colors.grey[200],
-                      border: Border(
-                        bottom: BorderSide(
-                          color: _selectedTab == 0
-                              ? AppTheme.primaryBlue
-                              : Colors.transparent,
-                          width: 3,
-                        ),
-                      ),
-                    ),
-                    child: Text(
-                      'Pending (${_pendingAssessments.length})',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: _selectedTab == 0 ? Colors.white : Colors.black,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _selectedTab = 1),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: _selectedTab == 1
-                          ? AppTheme.primaryBlue
-                          : Colors.grey[200],
-                      border: Border(
-                        bottom: BorderSide(
-                          color: _selectedTab == 1
-                              ? AppTheme.primaryBlue
-                              : Colors.transparent,
-                          width: 3,
-                        ),
-                      ),
-                    ),
-                    child: Text(
-                      'Reviewed (${_reviewedAssessments.length})',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: _selectedTab == 1 ? Colors.white : Colors.black,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          // Content
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _selectedTab == 0
-                    ? _buildPendingList()
-                    : _buildReviewedList(),
-          ),
-        ],
-      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _selectedTab == 0
+              ? _buildByTemplateView()
+              : _buildByPatientView(),
     );
   }
 
-  Widget _buildPendingList() {
-    if (_pendingAssessments.isEmpty) {
-      return const Center(
-        child: Text('No pending assessments'),
+  Widget _buildByTemplateView() {
+    if (_responsesByTemplate.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.assignment_outlined, size: 80, color: Colors.grey[300]),
+            const SizedBox(height: 16),
+            Text(
+              'No responses yet',
+              style: GoogleFonts.inter(fontSize: 18, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Patient responses will appear here',
+              style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[500]),
+            ),
+          ],
+        ),
       );
     }
 
     return RefreshIndicator(
-      onRefresh: _loadAssessments,
+      onRefresh: _loadResponses,
       child: ListView.builder(
-        itemCount: _pendingAssessments.length,
+        padding: const EdgeInsets.all(16),
+        itemCount: _responsesByTemplate.length,
         itemBuilder: (context, index) {
-          final assessment = _pendingAssessments[index];
+          final templateId = _responsesByTemplate.keys.elementAt(index);
+          final responses = _responsesByTemplate[templateId]!;
+          final templateName = responses.first['assessment_templates']?['name'] ?? 'Assessment $templateId';
+          
+          // Group by patient
+          final Map<String, List<Map<String, dynamic>>> byPatient = {};
+          for (var response in responses) {
+            final patientId = response['patient_user_id'] as String? ?? 'unknown';
+            byPatient.putIfAbsent(patientId, () => []).add(response);
+          }
+
           return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: ListTile(
+            margin: const EdgeInsets.only(bottom: 16),
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: ExpansionTile(
               leading: CircleAvatar(
-                backgroundColor: AppTheme.warningOrange,
-                child: const Icon(Icons.pending, color: Colors.white),
+                backgroundColor: AppTheme.primaryBlue,
+                child: const Icon(Icons.assignment, color: Colors.white),
               ),
-              title: Text(assessment.patientName),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Date: ${DateFormat('MMM d, y').format(assessment.assessmentDate)}'),
-                  Text('Assessed by: ${assessment.assessorName}'),
-                ],
+              title: Text(
+                templateName,
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
               ),
-              trailing: ElevatedButton(
-                onPressed: () => _showReviewDialog(assessment),
-                child: const Text('Review'),
-              ),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => AssessmentDetailScreen(
-                      assessmentId: assessment.id!,
-                    ),
+              subtitle: Text('${byPatient.length} patient(s) • ${responses.length} response(s)'),
+              children: byPatient.entries.map((entry) {
+                final patientResponses = entry.value;
+                final question = patientResponses.first['questions'];
+                final questionText = question?['question_text'] ?? 'Question';
+                
+                return ListTile(
+                  title: Text('Patient: ${entry.key}'),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: patientResponses.map((r) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${r['questions']?['question_text'] ?? 'Question'}: ${r['answer']}',
+                                style: GoogleFonts.inter(fontSize: 14),
+                              ),
+                            ),
+                            Text(
+                              DateFormat('MMM d, y').format(
+                                DateTime.parse(r['created_at']),
+                              ),
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
                   ),
                 );
-              },
+              }).toList(),
             ),
           );
         },
@@ -291,67 +184,90 @@ class _DoctorReviewScreenState extends State<DoctorReviewScreen> {
     );
   }
 
-  Widget _buildReviewedList() {
-    if (_reviewedAssessments.isEmpty) {
-      return const Center(
-        child: Text('No reviewed assessments'),
+  Widget _buildByPatientView() {
+    if (_responsesByPatient.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.person_outline, size: 80, color: Colors.grey[300]),
+            const SizedBox(height: 16),
+            Text(
+              'No patient responses yet',
+              style: GoogleFonts.inter(fontSize: 18, color: Colors.grey[600]),
+            ),
+          ],
+        ),
       );
     }
 
     return RefreshIndicator(
-      onRefresh: _loadAssessments,
+      onRefresh: _loadResponses,
       child: ListView.builder(
-        itemCount: _reviewedAssessments.length,
+        padding: const EdgeInsets.all(16),
+        itemCount: _responsesByPatient.length,
         itemBuilder: (context, index) {
-          final assessment = _reviewedAssessments[index];
+          final patientId = _responsesByPatient.keys.elementAt(index);
+          final patientData = _responsesByPatient[patientId]!;
+          final responses = patientData['responses'] as List<Map<String, dynamic>>;
+
           return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: ListTile(
+            margin: const EdgeInsets.only(bottom: 16),
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: ExpansionTile(
               leading: CircleAvatar(
-                backgroundColor: _getCapacityColor(assessment.overallCapacity),
-                child: const Icon(Icons.check, color: Colors.white),
+                backgroundColor: AppTheme.accentGreen,
+                child: const Icon(Icons.person, color: Colors.white),
               ),
-              title: Text(assessment.patientName),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Date: ${DateFormat('MMM d, y').format(assessment.assessmentDate)}'),
-                  Text('Capacity: ${assessment.overallCapacity}'),
-                ],
+              title: Text(
+                'Patient: ${patientId.substring(0, 8)}...',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
               ),
-              trailing: Chip(
-                label: Text(
-                  assessment.overallCapacity,
-                  style: const TextStyle(fontSize: 12, color: Colors.white),
-                ),
-                backgroundColor: _getCapacityColor(assessment.overallCapacity),
-              ),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => AssessmentDetailScreen(
-                      assessmentId: assessment.id!,
-                    ),
+              subtitle: Text('${responses.length} response(s)'),
+              children: responses.map((response) {
+                final question = response['questions'];
+                final template = response['assessment_templates'];
+                
+                return ListTile(
+                  title: Text(
+                    question?['question_text'] ?? 'Question',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w500),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 4),
+                      Text(
+                        'Answer: ${response['answer']}',
+                        style: GoogleFonts.inter(fontSize: 14),
+                      ),
+                      if (template != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Assessment: ${template['name']}',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 4),
+                      Text(
+                        'Date: ${DateFormat('MMM d, y • h:mm a').format(DateTime.parse(response['created_at']))}',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
                   ),
                 );
-              },
+              }).toList(),
             ),
           );
         },
       ),
     );
-  }
-
-  Color _getCapacityColor(String capacity) {
-    if (capacity.toLowerCase().contains('has capacity')) {
-      return Colors.green;
-    } else if (capacity.toLowerCase().contains('lacks capacity')) {
-      return Colors.red;
-    } else if (capacity.toLowerCase().contains('fluctuating')) {
-      return Colors.orange;
-    }
-    return Colors.grey;
   }
 }
-

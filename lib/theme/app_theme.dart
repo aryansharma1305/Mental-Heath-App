@@ -36,7 +36,7 @@ class AppTheme {
   static const Color surfaceWhite = Color(0xFFFFFFFF);
   static const Color cardWhite = Color(0xFFFFFBFD);
   static const Color dividerColor = Color(0xFFEEE5EA);
-  
+
   // Gradient Collections
   static const LinearGradient pinkGradient = LinearGradient(
     begin: Alignment.topLeft,
@@ -49,19 +49,19 @@ class AppTheme {
     end: Alignment.bottomRight,
     colors: [Color(0xFFA0D8B3), Color(0xFFD4F1D4)],
   );
-  
+
   static const LinearGradient beigeGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [Color(0xFFFFE4C4), Color(0xFFFFF4E6)],
   );
-  
+
   static const LinearGradient purpleGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [Color(0xFFD6BCFA), Color(0xFFE6D9F5)],
   );
-  
+
   static const LinearGradient blueGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
@@ -403,7 +403,7 @@ class AppTheme {
     gradient: beigeGradient,
     borderRadius: BorderRadius.circular(24),
     boxShadow: softShadow,
-  );
+      );
 
   static BoxDecoration purpleCardDecoration = BoxDecoration(
     gradient: purpleGradient,
@@ -443,7 +443,7 @@ class AppTheme {
       case 'writing':
         return const LinearGradient(
           colors: [Color(0xFFFFF9C4), Color(0xFFFFFDE7)],
-        );
+      );
       case 'math':
         return purpleGradient;
       case 'chemistry':
