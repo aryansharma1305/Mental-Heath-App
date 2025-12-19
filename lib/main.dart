@@ -6,7 +6,6 @@ import 'screens/splash_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
-import 'screens/supabase_test_screen.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
@@ -123,7 +122,6 @@ class MentalCapacityAssessmentApp extends StatelessWidget {
         '/home': (context) => const HomeScreen(),
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
-        '/supabase_test': (context) => const SupabaseTestScreen(),
       },
       builder: (context, child) {
         return MediaQuery(

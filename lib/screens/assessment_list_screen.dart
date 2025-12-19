@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/assessment.dart';
-import '../services/database_service.dart';
+import '../services/supabase_service.dart';
 import 'assessment_detail_screen.dart';
 
 class AssessmentListScreen extends StatefulWidget {
@@ -12,7 +13,7 @@ class AssessmentListScreen extends StatefulWidget {
 }
 
 class _AssessmentListScreenState extends State<AssessmentListScreen> {
-  final DatabaseService _databaseService = DatabaseService();
+  final SupabaseService _supabaseService = SupabaseService();
   final TextEditingController _searchController = TextEditingController();
   
   List<Assessment> _assessments = [];
@@ -29,13 +30,17 @@ class _AssessmentListScreenState extends State<AssessmentListScreen> {
   Future<void> _loadAssessments() async {
     setState(() => _isLoading = true);
     try {
-      final assessments = await _databaseService.getAllAssessments();
-      setState(() {
-        _assessments = assessments;
-        _filteredAssessments = assessments;
-        _isLoading = false;
-      });
-      _sortAssessments();
+      if (SupabaseService.isAvailable) {
+        final assessments = await _supabaseService.getAllAssessments();
+        setState(() {
+          _assessments = assessments;
+          _filteredAssessments = assessments;
+          _isLoading = false;
+        });
+        _sortAssessments();
+      } else {
+        setState(() => _isLoading = false);
+      }
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
@@ -90,6 +95,32 @@ class _AssessmentListScreenState extends State<AssessmentListScreen> {
         return Colors.orange;
       default:
         return Colors.grey;
+    }
+  }
+
+  Color _getStatusColor(String? status) {
+    switch (status) {
+      case 'pending':
+        return Colors.orange;
+      case 'reviewed':
+        return Colors.blue;
+      case 'completed':
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _getStatusLabel(String? status) {
+    switch (status) {
+      case 'pending':
+        return 'Pending';
+      case 'reviewed':
+        return 'Reviewed';
+      case 'completed':
+        return 'Completed';
+      default:
+        return 'Unknown';
     }
   }
 
@@ -226,29 +257,64 @@ class _AssessmentListScreenState extends State<AssessmentListScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     const SizedBox(height: 4),
-                                    Text('ID: ${assessment.patientId}'),
-                                    Text('Assessor: ${assessment.assessorName}'),
+                                    Text(
+                                      'ID: ${assessment.patientId}',
+                                      style: GoogleFonts.inter(fontSize: 12),
+                                    ),
+                                    Text(
+                                      'Assessor: ${assessment.assessorName}',
+                                      style: GoogleFonts.inter(fontSize: 12),
+                                    ),
                                     Text(
                                       'Date: ${DateFormat('MMM d, y').format(assessment.assessmentDate)}',
+                                      style: GoogleFonts.inter(fontSize: 12),
                                     ),
                                     const SizedBox(height: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: _getCapacityColor(assessment.overallCapacity),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        assessment.overallCapacity,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w500,
+                                    Row(
+                                      children: [
+                                        if (assessment.status != null)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 4,
+                                            ),
+                                            margin: const EdgeInsets.only(right: 8),
+                                            decoration: BoxDecoration(
+                                              color: _getStatusColor(assessment.status),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: Text(
+                                              _getStatusLabel(assessment.status),
+                                              style: GoogleFonts.inter(
+                                                color: Colors.white,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                        Expanded(
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 4,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: _getCapacityColor(assessment.overallCapacity),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: Text(
+                                              assessment.overallCapacity,
+                                              style: GoogleFonts.inter(
+                                                color: Colors.white,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
                                         ),
-                                      ),
+                                      ],
                                     ),
                                   ],
                                 ),

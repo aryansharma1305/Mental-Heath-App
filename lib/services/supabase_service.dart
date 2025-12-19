@@ -254,10 +254,91 @@ class SupabaseService {
           'responses': assessment.responses,
           'overall_capacity': assessment.overallCapacity,
           'recommendations': assessment.recommendations,
-          'status': 'reviewed',
+          'status': assessment.status ?? 'pending',
+          'reviewed_by': assessment.reviewedBy,
+          'reviewed_at': assessment.reviewedAt?.toIso8601String(),
+          'doctor_notes': assessment.doctorNotes,
+          'template_id': assessment.templateId,
           'updated_at': DateTime.now().toIso8601String(),
         })
         .eq('id', assessment.id!);
+  }
+
+  // ========== DOCTOR REVIEW OPERATIONS ==========
+  
+  Future<void> reviewAssessment({
+    required int assessmentId,
+    required String reviewerId,
+    required String status, // 'reviewed' or 'completed'
+    String? doctorNotes,
+  }) async {
+    if (!isAvailable) return;
+    
+    await client!
+        .from('assessments')
+        .update({
+          'status': status,
+          'reviewed_by': reviewerId,
+          'reviewed_at': DateTime.now().toIso8601String(),
+          'doctor_notes': doctorNotes,
+          'updated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('id', assessmentId);
+  }
+
+  Future<void> addDoctorNotes({
+    required int assessmentId,
+    required String reviewerId,
+    required String notes,
+  }) async {
+    if (!isAvailable) return;
+    
+    await client!
+        .from('assessments')
+        .update({
+          'doctor_notes': notes,
+          'reviewed_by': reviewerId,
+          'reviewed_at': DateTime.now().toIso8601String(),
+          'status': 'reviewed',
+          'updated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('id', assessmentId);
+  }
+
+  Future<List<Assessment>> getAssessmentsByStatus(String status) async {
+    if (!isAvailable) return [];
+    try {
+      final response = await client!
+          .from('assessments')
+          .select()
+          .eq('status', status)
+          .order('assessment_date', ascending: false);
+      
+      return (response as List)
+          .map((item) => Assessment.fromMap(item))
+          .toList();
+    } catch (e) {
+      debugPrint('Error getting assessments by status: $e');
+      return [];
+    }
+  }
+
+  Future<List<Assessment>> getAssessmentsForReview() async {
+    if (!isAvailable) return [];
+    try {
+      final response = await client!
+          .from('assessments')
+          .select()
+          .in_('status', ['pending', 'reviewed'])
+          .order('assessment_date', ascending: false);
+      
+      return (response as List)
+          .map((item) => Assessment.fromMap(item))
+          .toList();
+    } catch (e) {
+      debugPrint('Error getting assessments for review: $e');
+      return [];
+    }
   }
 
   Future<List<Assessment>> getPendingAssessments() async {

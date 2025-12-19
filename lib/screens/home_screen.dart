@@ -15,6 +15,9 @@ import 'select_assessment_screen.dart';
 import 'doctor_review_screen.dart';
 import 'admin_panel_screen.dart';
 import 'profile_screen.dart';
+import 'analytics_screen.dart';
+import 'help_support_screen.dart';
+import 'doctor_dashboard_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -460,15 +463,30 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           'title': 'Help & Support',
           'subtitle': 'Get assistance',
           'onTap': () {
-            // TODO: Help screen
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Help coming soon!')),
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const HelpSupportScreen(),
+              ),
             );
           },
         },
       ];
     } else if (_userRole.canReviewAssessments) {
       return [
+        {
+          'icon': Icons.dashboard_outlined,
+          'title': 'Dashboard',
+          'subtitle': 'Doctor hub',
+          'onTap': () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const DoctorDashboardScreen(),
+              ),
+            );
+          },
+        },
         {
           'icon': Icons.rate_review_outlined,
           'title': 'Review',
@@ -500,9 +518,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           'title': 'Analytics',
           'subtitle': 'View statistics',
           'onTap': () {
-            // TODO: Analytics screen
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Analytics coming soon!')),
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AnalyticsScreen(),
+              ),
             );
           },
         },
@@ -567,9 +587,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           'title': 'Analytics',
           'subtitle': 'System stats',
           'onTap': () {
-            // TODO: Analytics
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Analytics coming soon!')),
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AnalyticsScreen(),
+              ),
             );
           },
         },

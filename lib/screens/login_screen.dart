@@ -7,7 +7,7 @@ import '../widgets/custom_widgets.dart';
 import '../services/auth_service.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
-import 'supabase_test_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -107,21 +107,6 @@ class _LoginScreenState extends State<LoginScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        actions: [
-          // Supabase Test Button
-          IconButton(
-            icon: const Icon(Icons.cloud_queue, color: Colors.white),
-            tooltip: 'Test Supabase Connection',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const SupabaseTestScreen(),
-                ),
-              );
-            },
-          ),
-        ],
       ),
       extendBodyBehindAppBar: true,
       body: Container(
@@ -293,10 +278,10 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               TextButton(
                                 onPressed: () {
-                                  // TODO: Implement forgot password
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Forgot password feature coming soon'),
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const ForgotPasswordScreen(),
                                     ),
                                   );
                                 },

@@ -6,6 +6,8 @@ import '../services/auth_service.dart';
 import '../services/database_service.dart';
 import '../theme/app_theme.dart';
 import 'login_screen.dart';
+import 'settings_screen.dart';
+import 'help_support_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -240,9 +242,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           title: const Text('Settings'),
                           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                           onTap: () {
-                            // TODO: Navigate to settings
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Settings coming soon!')),
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const SettingsScreen(),
+                              ),
                             );
                           },
                         ),
@@ -252,9 +256,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           title: const Text('Help & Support'),
                           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                           onTap: () {
-                            // TODO: Navigate to help
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Help coming soon!')),
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const HelpSupportScreen(),
+                              ),
                             );
                           },
                         ),

@@ -11,6 +11,11 @@ class Assessment {
   final String recommendations;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? status; // 'pending', 'reviewed', 'completed'
+  final String? reviewedBy; // UUID of reviewer
+  final DateTime? reviewedAt;
+  final String? doctorNotes; // Doctor's review notes
+  final int? templateId; // Assessment template ID
 
   Assessment({
     this.id,
@@ -25,6 +30,11 @@ class Assessment {
     required this.recommendations,
     required this.createdAt,
     required this.updatedAt,
+    this.status,
+    this.reviewedBy,
+    this.reviewedAt,
+    this.doctorNotes,
+    this.templateId,
   });
 
   Map<String, dynamic> toMap() {
@@ -41,23 +51,73 @@ class Assessment {
       'recommendations': recommendations,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
+      'status': status ?? 'pending',
+      'reviewed_by': reviewedBy,
+      'reviewed_at': reviewedAt?.toIso8601String(),
+      'doctor_notes': doctorNotes,
+      'template_id': templateId,
     };
   }
 
   factory Assessment.fromMap(Map<String, dynamic> map) {
     return Assessment(
       id: map['id'],
-      patientId: map['patient_id'],
-      patientName: map['patient_name'],
+      patientId: map['patient_id'] ?? '',
+      patientName: map['patient_name'] ?? '',
       assessmentDate: DateTime.parse(map['assessment_date']),
-      assessorName: map['assessor_name'],
-      assessorRole: map['assessor_role'],
-      decisionContext: map['decision_context'],
+      assessorName: map['assessor_name'] ?? '',
+      assessorRole: map['assessor_role'] ?? '',
+      decisionContext: map['decision_context'] ?? '',
       responses: _parseResponses(map['responses']),
-      overallCapacity: map['overall_capacity'],
-      recommendations: map['recommendations'],
+      overallCapacity: map['overall_capacity'] ?? '',
+      recommendations: map['recommendations'] ?? '',
       createdAt: DateTime.parse(map['created_at']),
       updatedAt: DateTime.parse(map['updated_at']),
+      status: map['status'] as String?,
+      reviewedBy: map['reviewed_by'] as String?,
+      reviewedAt: map['reviewed_at'] != null ? DateTime.parse(map['reviewed_at']) : null,
+      doctorNotes: map['doctor_notes'] as String?,
+      templateId: map['template_id'] as int?,
+    );
+  }
+
+  Assessment copyWith({
+    int? id,
+    String? patientId,
+    String? patientName,
+    DateTime? assessmentDate,
+    String? assessorName,
+    String? assessorRole,
+    String? decisionContext,
+    Map<String, dynamic>? responses,
+    String? overallCapacity,
+    String? recommendations,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    String? status,
+    String? reviewedBy,
+    DateTime? reviewedAt,
+    String? doctorNotes,
+    int? templateId,
+  }) {
+    return Assessment(
+      id: id ?? this.id,
+      patientId: patientId ?? this.patientId,
+      patientName: patientName ?? this.patientName,
+      assessmentDate: assessmentDate ?? this.assessmentDate,
+      assessorName: assessorName ?? this.assessorName,
+      assessorRole: assessorRole ?? this.assessorRole,
+      decisionContext: decisionContext ?? this.decisionContext,
+      responses: responses ?? this.responses,
+      overallCapacity: overallCapacity ?? this.overallCapacity,
+      recommendations: recommendations ?? this.recommendations,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      status: status ?? this.status,
+      reviewedBy: reviewedBy ?? this.reviewedBy,
+      reviewedAt: reviewedAt ?? this.reviewedAt,
+      doctorNotes: doctorNotes ?? this.doctorNotes,
+      templateId: templateId ?? this.templateId,
     );
   }
 

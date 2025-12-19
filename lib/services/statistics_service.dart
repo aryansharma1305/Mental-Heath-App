@@ -1,11 +1,24 @@
 import '../models/assessment.dart';
-import 'database_service.dart';
+import 'supabase_service.dart';
 
 class StatisticsService {
-  final DatabaseService _databaseService = DatabaseService();
+  final SupabaseService _supabaseService = SupabaseService();
 
   Future<Map<String, dynamic>> getDashboardStats() async {
-    final assessments = await _databaseService.getAllAssessments();
+    if (!SupabaseService.isAvailable) {
+      return {
+        'totalAssessments': 0,
+        'todayAssessments': 0,
+        'weekAssessments': 0,
+        'monthAssessments': 0,
+        'capacityDistribution': <String, int>{},
+        'recentActivity': <DateTime, int>{},
+        'topAssessors': <MapEntry<String, int>>[],
+        'averagePerDay': '0',
+      };
+    }
+    
+    final assessments = await _supabaseService.getAllAssessments();
     
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -86,7 +99,9 @@ class StatisticsService {
   }
 
   Future<List<Map<String, dynamic>>> getMonthlyTrends() async {
-    final assessments = await _databaseService.getAllAssessments();
+    if (!SupabaseService.isAvailable) return [];
+    
+    final assessments = await _supabaseService.getAllAssessments();
     final monthlyData = <String, Map<String, int>>{};
     
     for (final assessment in assessments) {
@@ -128,7 +143,16 @@ class StatisticsService {
   }
 
   Future<Map<String, dynamic>> getAssessorPerformance(String assessorName) async {
-    final assessments = await _databaseService.getAllAssessments();
+    if (!SupabaseService.isAvailable) {
+      return {
+        'totalAssessments': 0,
+        'averagePerWeek': 0.0,
+        'capacityDistribution': <String, int>{},
+        'recentAssessments': <Assessment>[],
+      };
+    }
+    
+    final assessments = await _supabaseService.getAllAssessments();
     final userAssessments = assessments.where((a) => a.assessorName == assessorName).toList();
     
     if (userAssessments.isEmpty) {
