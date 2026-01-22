@@ -7,6 +7,7 @@ import '../services/auth_service.dart';
 import '../services/statistics_service.dart';
 import '../models/assessment.dart';
 import '../theme/app_theme.dart';
+import 'assessment_detail_screen.dart';
 
 class DoctorAnalyticsScreen extends StatefulWidget {
   const DoctorAnalyticsScreen({super.key});

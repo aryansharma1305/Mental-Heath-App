@@ -18,6 +18,8 @@ import 'profile_screen.dart';
 import 'analytics_screen.dart';
 import 'help_support_screen.dart';
 import 'doctor_dashboard_screen.dart';
+import 'dsm5_assessment_screen.dart';
+import 'responses_viewer_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -420,14 +422,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (_userRole == UserRole.patient) {
       return [
         {
-          'icon': Icons.assignment_outlined,
-          'title': 'Take Assessment',
-          'subtitle': 'Answer questionnaire',
+          'icon': Icons.psychology_outlined,
+          'title': 'DSM-5 Assessment',
+          'subtitle': 'Symptom screening',
           'onTap': () {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => const SelectAssessmentScreen(),
+                builder: (context) => const DSM5AssessmentScreen(),
               ),
             );
           },
@@ -440,7 +442,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => const AssessmentListScreen(),
+                builder: (context) => const ResponsesViewerScreen(),
               ),
             );
           },
@@ -475,40 +477,27 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     } else if (_userRole.canReviewAssessments) {
       return [
         {
-          'icon': Icons.dashboard_outlined,
-          'title': 'Dashboard',
-          'subtitle': 'Doctor hub',
+          'icon': Icons.psychology_outlined,
+          'title': 'Collect Data',
+          'subtitle': 'DSM-5 Assessment',
           'onTap': () {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => const DoctorDashboardScreen(),
+                builder: (context) => const DSM5AssessmentScreen(),
               ),
             );
           },
         },
         {
-          'icon': Icons.rate_review_outlined,
-          'title': 'Review',
-          'subtitle': 'Patient assessments',
+          'icon': Icons.assessment_outlined,
+          'title': 'View Responses',
+          'subtitle': 'All collected data',
           'onTap': () {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => const DoctorReviewScreen(),
-              ),
-            );
-          },
-        },
-        {
-          'icon': Icons.list_alt,
-          'title': 'All Assessments',
-          'subtitle': 'Browse all',
-          'onTap': () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const AssessmentListScreen(),
+                builder: (context) => const ResponsesViewerScreen(),
               ),
             );
           },
@@ -700,29 +689,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             color: Colors.white,
           ),
         ),
-        onPressed: () async {
-          if (_userRole == UserRole.patient) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const SelectAssessmentScreen(),
-              ),
-            );
-          } else if (_userRole == UserRole.admin) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const AdminPanelScreen(),
-              ),
-            );
-          } else {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const DoctorReviewScreen(),
-              ),
-            );
-          }
+        onPressed: () {
+          // Always go to DSM-5 Assessment for data collection
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const DSM5AssessmentScreen(),
+            ),
+          );
         },
       ),
     ).animate(onPlay: (controller) => controller.repeat(reverse: true))

@@ -329,7 +329,7 @@ class SupabaseService {
       final response = await client!
           .from('assessments')
           .select()
-          .in_('status', ['pending', 'reviewed'])
+          .inFilter('status', ['pending', 'reviewed'])
           .order('assessment_date', ascending: false);
       
       return (response as List)
