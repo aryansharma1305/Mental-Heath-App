@@ -1,324 +1,421 @@
 import '../models/question.dart';
 
-/// Mental Capacity Assessment Questions
-/// Based on the Mental Capacity Act principles
 class AssessmentQuestions {
-  
-  /// The 13 standard Mental Capacity Assessment questions
-  /// Each has 5 multiple choice options
+
+  static const List<String> standardOptions = [
+    'None - Not at all',
+    'Slight - Rare, less than a day or two',
+    'Mild - Several days',
+    'Moderate - More than half the days',
+    'Severe - Nearly every day',
+  ];
   static List<Question> getStandardQuestions() {
     return [
-      // Question 1: Understanding
       Question(
-        text: 'Does the person understand the information relevant to the decision?',
+        text: 'Little interest or pleasure in doing things?',
         type: QuestionType.multipleChoice,
-        options: [
-          'Fully understands all relevant information',
-          'Understands most of the relevant information',
-          'Partial understanding with some gaps',
-          'Limited understanding of relevant information',
-          'Cannot understand the relevant information',
-        ],
+        options: standardOptions,
         required: true,
-        category: 'Understanding',
+        category: 'I. Depression',
         order: 1,
       ),
-      
-      // Question 2: Retaining Information
       Question(
-        text: 'Can the person retain the information long enough to make the decision?',
+        text: 'Feeling down, depressed, or hopeless?',
         type: QuestionType.multipleChoice,
-        options: [
-          'Retains information fully throughout the decision-making process',
-          'Retains most information with minor lapses',
-          'Retains information for a limited time',
-          'Has difficulty retaining information',
-          'Cannot retain the information at all',
-        ],
+        options: standardOptions,
         required: true,
-        category: 'Retaining',
+        category: 'I. Depression',
         order: 2,
       ),
       
-      // Question 3: Using Information
       Question(
-        text: 'Can the person use or weigh the information as part of the decision-making process?',
+        text: 'Feeling more irritated, grouchy, or angry than usual?',
         type: QuestionType.multipleChoice,
-        options: [
-          'Can fully use and weigh all relevant information',
-          'Can use and weigh most information effectively',
-          'Shows some ability to use and weigh information',
-          'Limited ability to use or weigh information',
-          'Cannot use or weigh the information',
-        ],
+        options: standardOptions,
         required: true,
-        category: 'Using Information',
+        category: 'II. Anger',
         order: 3,
       ),
-      
-      // Question 4: Communicating Decision
       Question(
-        text: 'Can the person communicate their decision (by any means)?',
+        text: 'Sleeping less than usual, but still have a lot of energy?',
         type: QuestionType.multipleChoice,
-        options: [
-          'Can clearly communicate decision by speech/writing/other means',
-          'Can communicate decision with some support',
-          'Can communicate decision with significant assistance',
-          'Has difficulty communicating decision clearly',
-          'Cannot communicate their decision by any means',
-        ],
+        options: standardOptions,
         required: true,
-        category: 'Communication',
+        category: 'III. Mania',
         order: 4,
       ),
-      
-      // Question 5: Appreciation of Consequences
       Question(
-        text: 'Does the person appreciate the consequences of making or not making the decision?',
+        text: 'Starting lots more projects than usual or doing more risky things than usual?',
         type: QuestionType.multipleChoice,
-        options: [
-          'Fully appreciates all potential consequences',
-          'Appreciates most consequences',
-          'Partial appreciation of consequences',
-          'Limited appreciation of consequences',
-          'Does not appreciate the consequences',
-        ],
+        options: standardOptions,
         required: true,
-        category: 'Appreciation',
+        category: 'III. Mania',
         order: 5,
       ),
       
-      // Question 6: Consistency
+      // Domain IV: Anxiety (Questions 6-8)
       Question(
-        text: 'Is the person\'s decision consistent with their known values and beliefs?',
+        text: 'Feeling nervous, anxious, frightened, worried, or on edge?',
         type: QuestionType.multipleChoice,
-        options: [
-          'Decision is fully consistent with known values/beliefs',
-          'Decision is mostly consistent',
-          'Some inconsistency with known values/beliefs',
-          'Decision appears inconsistent with values/beliefs',
-          'Unable to determine or clearly inconsistent',
-        ],
+        options: standardOptions,
         required: true,
-        category: 'Consistency',
+        category: 'IV. Anxiety',
         order: 6,
       ),
-      
-      // Question 7: Influence of Mental Disorder
       Question(
-        text: 'Is there an impairment or disturbance in the functioning of the mind or brain?',
+        text: 'Feeling panic or being frightened?',
         type: QuestionType.multipleChoice,
-        options: [
-          'No impairment or disturbance identified',
-          'Minor impairment that does not affect decision-making',
-          'Moderate impairment that may affect decision-making',
-          'Significant impairment affecting decision-making',
-          'Severe impairment preventing decision-making',
-        ],
+        options: standardOptions,
         required: true,
-        category: 'Mental Impairment',
+        category: 'IV. Anxiety',
         order: 7,
       ),
-      
-      // Question 8: Timing
       Question(
-        text: 'Is this the right time to assess capacity for this decision?',
+        text: 'Avoiding situations that make you anxious?',
         type: QuestionType.multipleChoice,
-        options: [
-          'Optimal time - person is at their best',
-          'Good time - person is reasonably alert and focused',
-          'Acceptable time with some limitations',
-          'Suboptimal time - assessment may need to be repeated',
-          'Not appropriate time - defer assessment',
-        ],
+        options: standardOptions,
         required: true,
-        category: 'Timing',
+        category: 'IV. Anxiety',
         order: 8,
       ),
       
-      // Question 9: Support Provided
       Question(
-        text: 'Has all practicable support been provided to help the person make the decision?',
+        text: 'Unexplained aches and pains (e.g., head, back, joints, abdomen, legs)?',
         type: QuestionType.multipleChoice,
-        options: [
-          'All practicable support has been provided',
-          'Most support options have been explored',
-          'Some support has been provided',
-          'Limited support has been offered',
-          'No additional support has been provided',
-        ],
+        options: standardOptions,
         required: true,
-        category: 'Support',
+        category: 'V. Somatic Symptoms',
         order: 9,
       ),
-      
-      // Question 10: Risk Awareness
       Question(
-        text: 'Does the person understand the risks involved in the decision?',
+        text: 'Feeling that your illnesses are not being taken seriously enough?',
         type: QuestionType.multipleChoice,
-        options: [
-          'Fully understands all risks',
-          'Understands most significant risks',
-          'Partial understanding of risks',
-          'Limited understanding of risks',
-          'Does not understand the risks',
-        ],
+        options: standardOptions,
         required: true,
-        category: 'Risk Awareness',
+        category: 'V. Somatic Symptoms',
         order: 10,
       ),
-      
-      // Question 11: Alternatives Considered
+    
       Question(
-        text: 'Has the person been presented with and understood alternative options?',
+        text: 'Thoughts of actually hurting yourself?',
         type: QuestionType.multipleChoice,
-        options: [
-          'All alternatives presented and understood',
-          'Most alternatives presented and understood',
-          'Some alternatives presented with partial understanding',
-          'Limited alternatives discussed',
-          'No alternatives presented or not understood',
-        ],
+        options: standardOptions,
         required: true,
-        category: 'Alternatives',
+        category: 'VI. Suicidal Ideation',
         order: 11,
       ),
       
-      // Question 12: Fluctuating Capacity
       Question(
-        text: 'Is the person\'s capacity likely to fluctuate or improve?',
+        text: 'Hearing things other people couldn\'t hear, such as voices even when no one was around?',
         type: QuestionType.multipleChoice,
-        options: [
-          'Capacity is stable and unlikely to change',
-          'Capacity may improve with time/treatment',
-          'Capacity fluctuates - may need reassessment',
-          'Capacity is declining',
-          'Cannot determine fluctuation pattern',
-        ],
+        options: standardOptions,
         required: true,
-        category: 'Fluctuation',
+        category: 'VII. Psychosis',
         order: 12,
       ),
-      
-      // Question 13: Overall Capacity Determination
       Question(
-        text: 'Based on the assessment, what is the overall capacity determination?',
+        text: 'Feeling that someone could hear your thoughts, or that you could hear what another person was thinking?',
         type: QuestionType.multipleChoice,
-        options: [
-          'Has capacity for this decision',
-          'Lacks capacity for this decision',
-          'Fluctuating capacity - reassessment needed',
-          'Requires further specialist assessment',
-          'Unable to complete assessment at this time',
-        ],
+        options: standardOptions,
         required: true,
-        category: 'Overall Determination',
+        category: 'VII. Psychosis',
         order: 13,
+      ),
+    
+      Question(
+        text: 'Problems with sleep that affected your sleep quality over all?',
+        type: QuestionType.multipleChoice,
+        options: standardOptions,
+        required: true,
+        category: 'VIII. Sleep Problems',
+        order: 14,
+      ),
+      
+      Question(
+        text: 'Problems with memory (e.g., learning new information) or with location (e.g., finding your way home)?',
+        type: QuestionType.multipleChoice,
+        options: standardOptions,
+        required: true,
+        category: 'IX. Memory',
+        order: 15,
+      ),
+      
+      Question(
+        text: 'Unpleasant thoughts, urges, or images that repeatedly enter your mind?',
+        type: QuestionType.multipleChoice,
+        options: standardOptions,
+        required: true,
+        category: 'X. Repetitive Thoughts',
+        order: 16,
+      ),
+      Question(
+        text: 'Feeling driven to perform certain behaviors or mental acts over and over again?',
+        type: QuestionType.multipleChoice,
+        options: standardOptions,
+        required: true,
+        category: 'X. Repetitive Thoughts',
+        order: 17,
+      ),
+      
+      // Domain XI: Dissociation (Question 18)
+      Question(
+        text: 'Feeling detached or distant from yourself, your body, your physical surroundings, or your memories?',
+        type: QuestionType.multipleChoice,
+        options: standardOptions,
+        required: true,
+        category: 'XI. Dissociation',
+        order: 18,
+      ),
+      
+      // Domain XII: Personality Functioning (Questions 19-20)
+      Question(
+        text: 'Not knowing who you really are or what you want out of life?',
+        type: QuestionType.multipleChoice,
+        options: standardOptions,
+        required: true,
+        category: 'XII. Personality Functioning',
+        order: 19,
+      ),
+      Question(
+        text: 'Not feeling close to other people or enjoying your relationships with them?',
+        type: QuestionType.multipleChoice,
+        options: standardOptions,
+        required: true,
+        category: 'XII. Personality Functioning',
+        order: 20,
+      ),
+      
+      // Domain XIII: Substance Use (Questions 21-23)
+      Question(
+        text: 'Drinking at least 4 drinks of any kind of alcohol in a single day?',
+        type: QuestionType.multipleChoice,
+        options: standardOptions,
+        required: true,
+        category: 'XIII. Substance Use',
+        order: 21,
+      ),
+      Question(
+        text: 'Smoking any cigarettes, a cigar, or pipe, or using snuff or chewing tobacco?',
+        type: QuestionType.multipleChoice,
+        options: standardOptions,
+        required: true,
+        category: 'XIII. Substance Use',
+        order: 22,
+      ),
+      Question(
+        text: 'Using any of the following medicines ON YOUR OWN, that is, without a doctor\'s prescription, in greater amounts or longer than prescribed (e.g., painkillers like Vicodin, stimulants like Ritalin or Adderall, sedatives or tranquilizers like sleeping pills or Valium, or drugs like marijuana, cocaine or crack, club drugs like ecstasy, hallucinogens like LSD, heroin, inhalants or solvents like glue, or methamphetamine like speed)?',
+        type: QuestionType.multipleChoice,
+        options: standardOptions,
+        required: true,
+        category: 'XIII. Substance Use',
+        order: 23,
       ),
     ];
   }
 
-  /// Get capacity options for the final determination
-  static List<String> getCapacityOptions() {
-    return [
-      'Has capacity for this decision',
-      'Lacks capacity for this decision',
-      'Fluctuating capacity - reassessment needed',
-      'Requires further specialist assessment',
-      'Unable to complete assessment at this time',
-    ];
+  /// Get the response options
+  static List<String> getResponseOptions() {
+    return standardOptions;
   }
 
-  /// Calculate capacity score based on responses
-  /// Returns a map with score details
+  /// Calculate domain scores based on responses
+  /// Returns map with total score, domain scores, and severity
   static Map<String, dynamic> calculateCapacityScore(Map<String, dynamic> responses) {
     int totalScore = 0;
     int maxScore = 0;
-    Map<String, int> categoryScores = {};
+    Map<String, int> domainScores = {};
+    Map<String, int> domainMaxScores = {};
+    
+    final questions = getStandardQuestions();
     
     for (var entry in responses.entries) {
       final answer = entry.value as String;
-      final question = getStandardQuestions().firstWhere(
+      final question = questions.firstWhere(
         (q) => q.questionId == entry.key,
-        orElse: () => getStandardQuestions().first,
+        orElse: () => questions.first,
       );
       
-      // Score: first option = 4, last option = 0
-      final options = question.options ?? [];
+      // Score: None=0, Slight=1, Mild=2, Moderate=3, Severe=4
+      final options = question.options ?? standardOptions;
       final index = options.indexOf(answer);
-      final score = index >= 0 ? (4 - index) : 0;
+      final score = index >= 0 ? index : 0;
       
       totalScore += score;
       maxScore += 4;
       
-      final category = question.category ?? 'Unknown';
-      categoryScores[category] = (categoryScores[category] ?? 0) + score;
+      final domain = question.category ?? 'Unknown';
+      domainScores[domain] = (domainScores[domain] ?? 0) + score;
+      domainMaxScores[domain] = (domainMaxScores[domain] ?? 0) + 4;
     }
     
     final percentage = maxScore > 0 ? (totalScore / maxScore * 100) : 0.0;
+    
+    // Calculate domain percentages
+    Map<String, double> domainPercentages = {};
+    domainScores.forEach((domain, score) {
+      final maxForDomain = domainMaxScores[domain] ?? 4;
+      domainPercentages[domain] = (score / maxForDomain) * 100;
+    });
     
     return {
       'totalScore': totalScore,
       'maxScore': maxScore,
       'percentage': percentage,
-      'categoryScores': categoryScores,
+      'categoryScores': domainScores,
+      'domainMaxScores': domainMaxScores,
+      'domainPercentages': domainPercentages,
     };
   }
 
-  /// Get capacity determination based on score percentage
+  /// Get overall severity based on score percentage
   static String getCapacityDetermination(double percentage) {
-    if (percentage >= 80) {
-      return 'Has capacity for this decision';
-    } else if (percentage >= 60) {
-      return 'Partial capacity - may need support';
-    } else if (percentage >= 40) {
-      return 'Fluctuating capacity - reassessment needed';
+    if (percentage < 10) {
+      return 'No significant symptoms';
+    } else if (percentage < 25) {
+      return 'Mild symptoms - Consider further monitoring';
+    } else if (percentage < 50) {
+      return 'Moderate symptoms - Further evaluation recommended';
+    } else if (percentage < 75) {
+      return 'Significant symptoms - Clinical evaluation needed';
     } else {
-      return 'Lacks capacity for this decision';
+      return 'Severe symptoms - Urgent clinical attention required';
     }
   }
 
-  /// Get recommendations based on capacity score
-  static List<String> getRecommendations(double percentage, Map<String, int> categoryScores) {
-    List<String> recommendations = [];
+  /// Get severity interpretation based on total score
+  static String getSeverityInterpretation(int totalScore) {
+    if (totalScore <= 10) {
+      return 'Minimal symptoms';
+    } else if (totalScore <= 25) {
+      return 'Mild symptoms';
+    } else if (totalScore <= 45) {
+      return 'Moderate symptoms';
+    } else if (totalScore <= 65) {
+      return 'Moderately severe symptoms';
+    } else {
+      return 'Severe symptoms';
+    }
+  }
+
+  /// Get capacity options for overall assessment
+  static List<String> getCapacityOptions() {
+    return [
+      'Has capacity for this decision',
+      'Lacks capacity for this decision',
+      'Fluctuating capacity - reassessment needed',
+      'Unable to determine - further evaluation required',
+    ];
+  }
+
+  /// Calculate domain scores from responses
+  static Map<String, int> calculateDomainScores(Map<String, dynamic> responses) {
+    Map<String, int> domainScores = {};
+    final questions = getStandardQuestions();
     
-    if (percentage < 80) {
-      // Check weak categories
-      categoryScores.forEach((category, score) {
-        if (score < 3) {
-          switch (category) {
-            case 'Understanding':
-              recommendations.add('Provide information in simpler format or different modality');
-              break;
-            case 'Retaining':
-              recommendations.add('Use memory aids or written information');
-              break;
-            case 'Using Information':
-              recommendations.add('Allow more time for processing information');
-              break;
-            case 'Communication':
-              recommendations.add('Consider alternative communication methods');
-              break;
-            case 'Support':
-              recommendations.add('Explore additional support options');
-              break;
-            case 'Timing':
-              recommendations.add('Reassess at a more optimal time');
-              break;
-          }
-        }
-      });
+    for (var entry in responses.entries) {
+      final answer = entry.value.toString();
+      final question = questions.firstWhere(
+        (q) => q.questionId == entry.key,
+        orElse: () => questions.first,
+      );
+      
+      final options = question.options ?? standardOptions;
+      final index = options.indexOf(answer);
+      final score = index >= 0 ? index : 0;
+      
+      final domain = question.category ?? 'Unknown';
+      domainScores[domain] = (domainScores[domain] ?? 0) + score;
     }
     
-    if (percentage < 60) {
-      recommendations.add('Consider specialist assessment');
-      recommendations.add('Document reasons for capacity determination');
+    return domainScores;
+  }
+
+  /// Get domains requiring follow-up based on scores
+  static List<String> getDomainsRequiringFollowUp(Map<String, int> domainScores) {
+    List<String> flaggedDomains = [];
+    
+    domainScores.forEach((domain, score) {
+      // Flag if score is >= 2 (Mild or higher) for most domains
+      // For Suicidal Ideation, flag if score >= 1
+      if (domain.contains('Suicidal') && score >= 1) {
+        flaggedDomains.add(domain);
+      } else if (score >= 2) {
+        flaggedDomains.add(domain);
+      }
+    });
+    
+    return flaggedDomains;
+  }
+
+  /// Get clinical recommendations based on domain scores
+  static List<String> getRecommendations(double percentage, Map<String, int> domainScores) {
+    List<String> recommendations = [];
+    domainScores.forEach((domain, score) {
+      if (domain.contains('Suicidal') && score >= 1) {
+        recommendations.add('CRITICAL: Assess for suicide risk immediately');
+      } else if (domain.contains('Psychosis') && score >= 2) {
+        recommendations.add('Consider psychiatric evaluation for psychotic symptoms');
+      } else if (domain.contains('Depression') && score >= 4) {
+        recommendations.add('Screen for depressive disorder (PHQ-9 recommended)');
+      } else if (domain.contains('Anxiety') && score >= 4) {
+        recommendations.add('Screen for anxiety disorder (GAD-7 recommended)');
+      } else if (domain.contains('Mania') && score >= 2) {
+        recommendations.add('Screen for bipolar disorder');
+      } else if (domain.contains('Substance') && score >= 1) {
+        recommendations.add('Assess substance use patterns');
+      } else if (domain.contains('Sleep') && score >= 2) {
+        recommendations.add('Evaluate sleep disturbances');
+      }
+    });
+    
+    // General recommendations based on overall score
+    if (percentage >= 50) {
+      recommendations.add('Comprehensive psychiatric evaluation recommended');
+    } else if (percentage >= 25) {
+      recommendations.add('Consider follow-up assessment in 2-4 weeks');
     }
     
     if (recommendations.isEmpty) {
-      recommendations.add('Continue with decision-making process');
+      recommendations.add('Continue routine monitoring');
     }
     
     return recommendations;
+  }
+
+  /// Get domains requiring Level 2 assessment
+  static List<String> getDomainsNeedingLevel2(Map<String, dynamic> responses) {
+    List<String> domainsNeedingLevel2 = [];
+    
+    final questions = getStandardQuestions();
+    Map<String, int> domainHighestScores = {};
+    
+    for (var entry in responses.entries) {
+      final answer = entry.value as String;
+      final question = questions.firstWhere(
+        (q) => q.questionId == entry.key,
+        orElse: () => questions.first,
+      );
+      
+      final options = question.options ?? standardOptions;
+      final index = options.indexOf(answer);
+      final score = index >= 0 ? index : 0;
+      
+      final domain = question.category ?? 'Unknown';
+      if (score > (domainHighestScores[domain] ?? 0)) {
+        domainHighestScores[domain] = score;
+      }
+    }
+    
+    // Threshold is typically "Mild" (2) or higher for most domains
+    // "Slight" (1) for Suicidal Ideation
+    domainHighestScores.forEach((domain, highestScore) {
+      if (domain.contains('Suicidal') && highestScore >= 1) {
+        domainsNeedingLevel2.add(domain);
+      } else if (highestScore >= 2) {
+        domainsNeedingLevel2.add(domain);
+      }
+    });
+    
+    return domainsNeedingLevel2;
   }
 }

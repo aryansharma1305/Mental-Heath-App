@@ -79,12 +79,17 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
     setState(() => _isLoading = true);
 
     try {
+      // Get the logged-in doctor's user ID
+      final prefs = await SharedPreferences.getInstance();
+      final assessorUserId = prefs.getString('user_id');
+      
       final assessment = Assessment(
         patientId: _patientIdController.text,
         patientName: _patientNameController.text,
         assessmentDate: _assessmentDate,
         assessorName: _assessorName,
         assessorRole: _assessorRole,
+        assessorUserId: assessorUserId, // Save doctor's user ID
         decisionContext: _decisionContextController.text,
         responses: _responses.map((key, value) => MapEntry(key, value.toMap())),
         overallCapacity: _overallCapacity,

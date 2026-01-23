@@ -37,7 +37,14 @@ class _DoctorReviewScreenState extends State<DoctorReviewScreen> {
     setState(() => _isLoading = true);
     try {
       if (SupabaseService.isAvailable) {
-        _allAssessments = await _supabaseService.getAssessmentsForReview();
+        final userId = await _authService.getCurrentUserId();
+        
+        if (userId != null) {
+          // Load only assessments created by this doctor
+          _allAssessments = await _supabaseService.getAssessmentsByAssessorId(userId);
+        } else {
+          _allAssessments = [];
+        }
         
         // Load patient information
         for (var assessment in _allAssessments) {

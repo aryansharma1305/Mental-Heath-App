@@ -4,6 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/simple_splash_screen.dart';
 import 'screens/assessment_home_screen.dart';
+import 'screens/login_screen.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
@@ -63,6 +64,7 @@ class MentalCapacityAssessmentApp extends StatelessWidget {
       home: const SimpleSplashScreen(),
       routes: {
         '/home': (context) => const AssessmentHomeScreen(),
+        '/login': (context) => const LoginScreen(),
       },
       builder: (context, child) {
         return MediaQuery(

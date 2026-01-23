@@ -183,7 +183,7 @@ class SupabaseService {
 
   // ========== ASSESSMENT OPERATIONS ==========
   
-  Future<int> insertAssessment(Assessment assessment) async {
+  Future<int> insertAssessment(Assessment assessment, {String? assessorUserId}) async {
     if (!isAvailable) {
       throw Exception('Supabase is not available');
     }
@@ -196,7 +196,7 @@ class SupabaseService {
           'assessment_date': assessment.assessmentDate.toIso8601String(),
           'assessor_name': assessment.assessorName,
           'assessor_role': assessment.assessorRole,
-          'assessor_user_id': assessment.assessorName, // Update with actual user ID
+          'assessor_user_id': assessorUserId ?? assessment.assessorUserId, // Use actual user ID
           'decision_context': assessment.decisionContext,
           'responses': assessment.responses,
           'overall_capacity': assessment.overallCapacity,
@@ -371,6 +371,42 @@ class SupabaseService {
           .map((item) => Assessment.fromMap(item))
           .toList();
     } catch (e) {
+      return [];
+    }
+  }
+
+  Future<List<Assessment>> getAssessmentsByAssessorId(String assessorUserId) async {
+    if (!isAvailable) return [];
+    try {
+      final response = await client!
+          .from('assessments')
+          .select()
+          .eq('assessor_user_id', assessorUserId)
+          .order('assessment_date', ascending: false);
+      
+      return (response as List)
+          .map((item) => Assessment.fromMap(item))
+          .toList();
+    } catch (e) {
+      debugPrint('Error getting assessments by assessor ID: $e');
+      return [];
+    }
+  }
+
+  Future<List<Assessment>> getUnassignedAssessments() async {
+    if (!isAvailable) return [];
+    try {
+      final response = await client!
+          .from('assessments')
+          .select()
+          .or('assessor_user_id.is.null,assessor_user_id.eq.')
+          .order('assessment_date', ascending: false);
+      
+      return (response as List)
+          .map((item) => Assessment.fromMap(item))
+          .toList();
+    } catch (e) {
+      debugPrint('Error getting unassigned assessments: $e');
       return [];
     }
   }

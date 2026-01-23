@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../services/auth_service.dart';
+import 'dart:convert';
 import '../theme/app_theme.dart';
-import '../models/user.dart' as app_models;
+import '../services/language_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -13,454 +14,301 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  final AuthService _authService = AuthService();
-  final TextEditingController _currentPasswordController = TextEditingController();
-  final TextEditingController _newPasswordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
-  
-  bool _notificationsEnabled = true;
-  bool _darkModeEnabled = false;
-  bool _biometricEnabled = false;
-  app_models.User? _currentUser;
+  String _doctorName = 'Doctor';
+  String _designation = '';
+  String _hospital = '';
+  String _registrationNo = '';
+  AppLanguage _selectedLanguage = AppLanguage.english;
+  int _totalAssessments = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadSettings();
-    _loadUser();
+    _loadData();
   }
 
-  Future<void> _loadSettings() async {
+  Future<void> _loadData() async {
     final prefs = await SharedPreferences.getInstance();
+    final langService = LanguageService();
+    await langService.init();
+    
+    // Load doctor profile
+    final doctorJson = prefs.getString('doctor_profile');
+    if (doctorJson != null) {
+      try {
+        final data = jsonDecode(doctorJson);
+        setState(() {
+          _doctorName = data['name'] ?? 'Doctor';
+          _designation = data['designation'] ?? '';
+          _hospital = data['hospital'] ?? '';
+          _registrationNo = data['registration_number'] ?? '';
+        });
+      } catch (e) {
+        debugPrint('Error loading profile: $e');
+      }
+    }
+    
+    // Load assessment stats
+    final assessments = prefs.getStringList('capacity_assessments') ?? [];
+    
     setState(() {
-      _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
-      _darkModeEnabled = prefs.getBool('dark_mode_enabled') ?? false;
-      _biometricEnabled = prefs.getBool('biometric_enabled') ?? false;
+      _selectedLanguage = langService.currentLanguage;
+      _totalAssessments = assessments.length;
     });
   }
 
-  Future<void> _loadUser() async {
-    final user = await _authService.getCurrentUserModel();
+  Future<void> _changeLanguage(AppLanguage language) async {
+    final langService = LanguageService();
+    await langService.setLanguage(language);
     setState(() {
-      _currentUser = user;
+      _selectedLanguage = language;
     });
-  }
-
-  Future<void> _saveSetting(String key, bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(key, value);
-  }
-
-  Future<void> _changePassword() async {
-    if (_newPasswordController.text != _confirmPasswordController.text) {
+    
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Passwords do not match')),
+        SnackBar(
+          content: Text('Language changed to ${language.displayName}'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppTheme.successGreen,
+        ),
       );
-      return;
     }
-
-    if (_newPasswordController.text.length < 8) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password must be at least 8 characters')),
-      );
-      return;
-    }
-
-    // TODO: Implement actual password change with backend
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Password change feature coming soon')),
-    );
-
-    _currentPasswordController.clear();
-    _newPasswordController.clear();
-    _confirmPasswordController.clear();
-    Navigator.pop(context);
   }
 
-  void _showChangePasswordDialog() {
+  void _showLanguageDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
-          'Change Password',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+          'Select Language',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
         ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: _currentPasswordController,
-                obscureText: true,
-                decoration: InputDecoration(
-                  labelText: 'Current Password',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: AppLanguage.values.map((lang) {
+            final isSelected = lang == _selectedLanguage;
+            return ListTile(
+              leading: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isSelected ? AppTheme.primaryColor : Colors.transparent,
+                  border: Border.all(
+                    color: isSelected ? AppTheme.primaryColor : AppTheme.textGrey,
+                    width: 2,
                   ),
                 ),
+                child: isSelected
+                    ? const Icon(Icons.check, size: 16, color: Colors.white)
+                    : null,
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _newPasswordController,
-                obscureText: true,
-                decoration: InputDecoration(
-                  labelText: 'New Password',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+              title: Text(
+                lang.displayName,
+                style: GoogleFonts.inter(
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  color: isSelected ? AppTheme.primaryColor : AppTheme.textDark,
                 ),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _confirmPasswordController,
-                obscureText: true,
-                decoration: InputDecoration(
-                  labelText: 'Confirm New Password',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-            ],
-          ),
+              onTap: () {
+                Navigator.pop(context);
+                _changeLanguage(lang);
+              },
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _clearAllData() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Clear All Data?',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: AppTheme.errorRed),
+        ),
+        content: Text(
+          'This will delete all assessments and reset your profile. This action cannot be undone.',
+          style: GoogleFonts.inter(color: AppTheme.textMedium),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: GoogleFonts.inter(color: AppTheme.textGrey)),
           ),
           ElevatedButton(
-            onPressed: _changePassword,
-            child: const Text('Change Password'),
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.errorRed,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Clear', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
     );
+    
+    if (confirmed == true) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('All data cleared'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppTheme.errorRed,
+          ),
+        );
+        
+        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
-        title: const Text('Settings'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: AppTheme.softShadow,
+            ),
+            child: const Icon(Icons.arrow_back, color: AppTheme.textDark),
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text('Settings', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: AppTheme.textDark)),
+        centerTitle: true,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Account Section
-          _buildSectionHeader('Account'),
-          Card(
-            elevation: 1,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.person_outline),
-                  title: Text(
-                    'Profile Information',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w500),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Profile Card
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: AppTheme.primaryGradient,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [BoxShadow(color: AppTheme.primaryColor.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8))],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 70,
+                    height: 70,
+                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
+                    child: Center(child: Text(_doctorName.isNotEmpty ? _doctorName[0].toUpperCase() : 'D', style: GoogleFonts.poppins(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white))),
                   ),
-                  subtitle: Text(
-                    _currentUser?.email ?? 'Not available',
-                    style: GoogleFonts.inter(fontSize: 12),
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    // Navigate to profile edit
-                  },
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.lock_outline),
-                  title: Text(
-                    'Change Password',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w500),
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: _showChangePasswordDialog,
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Preferences Section
-          _buildSectionHeader('Preferences'),
-          Card(
-            elevation: 1,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: Column(
-              children: [
-                SwitchListTile(
-                  secondary: const Icon(Icons.notifications_outlined),
-                  title: Text(
-                    'Notifications',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w500),
-                  ),
-                  subtitle: Text(
-                    'Receive push notifications',
-                    style: GoogleFonts.inter(fontSize: 12),
-                  ),
-                  value: _notificationsEnabled,
-                  onChanged: (value) {
-                    setState(() {
-                      _notificationsEnabled = value;
-                    });
-                    _saveSetting('notifications_enabled', value);
-                  },
-                ),
-                const Divider(height: 1),
-                SwitchListTile(
-                  secondary: const Icon(Icons.dark_mode_outlined),
-                  title: Text(
-                    'Dark Mode',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w500),
-                  ),
-                  subtitle: Text(
-                    'Use dark theme',
-                    style: GoogleFonts.inter(fontSize: 12),
-                  ),
-                  value: _darkModeEnabled,
-                  onChanged: (value) {
-                    setState(() {
-                      _darkModeEnabled = value;
-                    });
-                    _saveSetting('dark_mode_enabled', value);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Dark mode coming soon'),
-                      ),
-                    );
-                  },
-                ),
-                const Divider(height: 1),
-                SwitchListTile(
-                  secondary: const Icon(Icons.fingerprint),
-                  title: Text(
-                    'Biometric Login',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w500),
-                  ),
-                  subtitle: Text(
-                    'Use fingerprint or face ID',
-                    style: GoogleFonts.inter(fontSize: 12),
-                  ),
-                  value: _biometricEnabled,
-                  onChanged: (value) {
-                    setState(() {
-                      _biometricEnabled = value;
-                    });
-                    _saveSetting('biometric_enabled', value);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Biometric login coming soon'),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Data Section
-          _buildSectionHeader('Data & Privacy'),
-          Card(
-            elevation: 1,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.download_outlined),
-                  title: Text(
-                    'Export Data',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w500),
-                  ),
-                  subtitle: Text(
-                    'Download your data',
-                    style: GoogleFonts.inter(fontSize: 12),
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Export feature coming soon')),
-                    );
-                  },
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.delete_outline, color: Colors.red),
-                  title: Text(
-                    'Delete Account',
-                    style: GoogleFonts.inter(
-                      fontWeight: FontWeight.w500,
-                      color: Colors.red,
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(_doctorName, style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        if (_designation.isNotEmpty) Text(_designation, style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withOpacity(0.85))),
+                        if (_hospital.isNotEmpty) Text(_hospital, style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withOpacity(0.7)), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      ],
                     ),
                   ),
-                  subtitle: Text(
-                    'Permanently delete your account',
-                    style: GoogleFonts.inter(fontSize: 12),
-                  ),
-                  trailing: const Icon(Icons.chevron_right, color: Colors.red),
-                  onTap: () {
-                    _showDeleteAccountDialog();
-                  },
+                ],
+              ),
+            ).animate().fadeIn().slideY(begin: -0.1, end: 0),
+            
+            const SizedBox(height: 24),
+            
+            Text('Language', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark)),
+            const SizedBox(height: 12),
+            
+            GestureDetector(
+              onTap: _showLanguageDialog,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: AppTheme.softShadow),
+                child: Row(
+                  children: [
+                    Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: AppTheme.primaryColor.withOpacity(0.1), borderRadius: BorderRadius.circular(12)), child: Icon(Icons.language, color: AppTheme.primaryColor)),
+                    const SizedBox(width: 16),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('App Language', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textDark)),
+                      Text(_selectedLanguage.displayName, style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textGrey)),
+                    ])),
+                    Icon(Icons.chevron_right, color: AppTheme.textGrey),
+                  ],
                 ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // About Section
-          _buildSectionHeader('About'),
-          Card(
-            elevation: 1,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.info_outline),
-                  title: Text(
-                    'App Version',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w500),
-                  ),
-                  subtitle: const Text('1.0.0'),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.privacy_tip_outlined),
-                  title: Text(
-                    'Privacy Policy',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w500),
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    _showPrivacyPolicy();
-                  },
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.description_outlined),
-                  title: Text(
-                    'Terms of Service',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w500),
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    _showTermsOfService();
-                  },
-                ),
-              ],
-            ),
-          ),
-        ],
+              ),
+            ).animate().fadeIn(delay: 100.ms),
+            
+            const SizedBox(height: 24),
+            
+            Text('Statistics', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark)),
+            const SizedBox(height: 12),
+            
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: AppTheme.softShadow),
+              child: Column(children: [
+                _buildStatRow('Total Assessments', '$_totalAssessments', Icons.assessment),
+                const Divider(height: 24),
+                _buildStatRow('Registration No.', _registrationNo.isEmpty ? 'Not set' : _registrationNo, Icons.badge),
+              ]),
+            ).animate().fadeIn(delay: 200.ms),
+            
+            const SizedBox(height: 24),
+            
+            Text('Data Management', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark)),
+            const SizedBox(height: 12),
+            
+            GestureDetector(
+              onTap: _clearAllData,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppTheme.errorRed.withOpacity(0.3)), boxShadow: AppTheme.softShadow),
+                child: Row(children: [
+                  Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: AppTheme.errorRed.withOpacity(0.1), borderRadius: BorderRadius.circular(12)), child: Icon(Icons.delete_outline, color: AppTheme.errorRed)),
+                  const SizedBox(width: 16),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('Clear All Data', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.errorRed)),
+                    Text('Delete all assessments and reset profile', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textGrey)),
+                  ])),
+                  Icon(Icons.chevron_right, color: AppTheme.textGrey),
+                ]),
+              ),
+            ).animate().fadeIn(delay: 300.ms),
+            
+            const SizedBox(height: 32),
+            
+            Center(child: Column(children: [
+              Text('DSM-5 Assessment', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textDark)),
+              const SizedBox(height: 4),
+              Text('Version 1.0.0', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textGrey)),
+            ])).animate().fadeIn(delay: 400.ms),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8, left: 4),
-      child: Text(
-        title,
-        style: GoogleFonts.poppins(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: Colors.grey[700],
-        ),
-      ),
-    );
-  }
-
-  void _showDeleteAccountDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Delete Account',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-        ),
-        content: Text(
-          'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.',
-          style: GoogleFonts.inter(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Account deletion feature coming soon'),
-                ),
-              );
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showPrivacyPolicy() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Privacy Policy',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-        ),
-        content: SingleChildScrollView(
-          child: Text(
-            'Your privacy is important to us. This app collects and stores assessment data securely. All data is encrypted and only accessible by authorized healthcare professionals. We comply with HIPAA regulations and healthcare data protection standards.',
-            style: GoogleFonts.inter(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showTermsOfService() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Terms of Service',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-        ),
-        content: SingleChildScrollView(
-          child: Text(
-            'By using this app, you agree to use it only for legitimate healthcare purposes. All assessments must be conducted in accordance with local clinical guidelines and legal requirements. Misuse of the system may result in account termination.',
-            style: GoogleFonts.inter(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _currentPasswordController.dispose();
-    _newPasswordController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
+  Widget _buildStatRow(String label, String value, IconData icon) {
+    return Row(children: [
+      Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: AppTheme.skyBlue, borderRadius: BorderRadius.circular(8)), child: Icon(icon, size: 18, color: AppTheme.infoBlue)),
+      const SizedBox(width: 12),
+      Text(label, style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textMedium)),
+      const Spacer(),
+      Text(value, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textDark)),
+    ]);
   }
 }

@@ -44,17 +44,19 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     setState(() => _isLoading = true);
     try {
       final user = await _authService.getCurrentUserModel();
+      final userId = await _authService.getCurrentUserId();
       
-      if (SupabaseService.isAvailable && user != null) {
-        // Load pending assessments
-        final allAssessments = await _supabaseService.getAssessmentsForReview();
-        _pendingAssessments = allAssessments
+      if (SupabaseService.isAvailable && user != null && userId != null) {
+        // Load assessments created by this doctor only
+        final doctorAssessments = await _supabaseService.getAssessmentsByAssessorId(userId);
+        
+        _pendingAssessments = doctorAssessments
             .where((a) => a.status == 'pending')
             .take(5)
             .toList();
         
-        // Load recent assessments
-        _recentAssessments = allAssessments
+        // Load recent assessments by this doctor
+        _recentAssessments = doctorAssessments
             .where((a) => a.status != 'pending')
             .take(5)
             .toList();

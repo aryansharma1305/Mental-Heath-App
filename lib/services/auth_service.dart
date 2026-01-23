@@ -448,5 +448,11 @@ class AuthService {
     final user = await getCurrentUserModel();
     return user?.role ?? UserRole.patient;
   }
+
+  // Get current user ID
+  Future<String?> getCurrentUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('user_id');
+  }
 }
 

@@ -16,6 +16,7 @@ class Assessment {
   final DateTime? reviewedAt;
   final String? doctorNotes; // Doctor's review notes
   final int? templateId; // Assessment template ID
+  final String? assessorUserId; // UUID of the doctor who created the assessment
 
   Assessment({
     this.id,
@@ -35,6 +36,7 @@ class Assessment {
     this.reviewedAt,
     this.doctorNotes,
     this.templateId,
+    this.assessorUserId,
   });
 
   Map<String, dynamic> toMap() {
@@ -56,6 +58,7 @@ class Assessment {
       'reviewed_at': reviewedAt?.toIso8601String(),
       'doctor_notes': doctorNotes,
       'template_id': templateId,
+      'assessor_user_id': assessorUserId,
     };
   }
 
@@ -78,6 +81,7 @@ class Assessment {
       reviewedAt: map['reviewed_at'] != null ? DateTime.parse(map['reviewed_at']) : null,
       doctorNotes: map['doctor_notes'] as String?,
       templateId: map['template_id'] as int?,
+      assessorUserId: map['assessor_user_id'] as String?,
     );
   }
 
@@ -99,6 +103,7 @@ class Assessment {
     DateTime? reviewedAt,
     String? doctorNotes,
     int? templateId,
+    String? assessorUserId,
   }) {
     return Assessment(
       id: id ?? this.id,
@@ -118,6 +123,7 @@ class Assessment {
       reviewedAt: reviewedAt ?? this.reviewedAt,
       doctorNotes: doctorNotes ?? this.doctorNotes,
       templateId: templateId ?? this.templateId,
+      assessorUserId: assessorUserId ?? this.assessorUserId,
     );
   }
 

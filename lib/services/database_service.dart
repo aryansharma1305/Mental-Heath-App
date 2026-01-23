@@ -271,4 +271,26 @@ class DatabaseService {
     );
     return List.generate(maps.length, (i) => Assessment.fromMap(maps[i]));
   }
+
+  Future<List<Assessment>> getAssessmentsByAssessorId(String assessorUserId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'assessments',
+      where: 'assessor_user_id = ?',
+      whereArgs: [assessorUserId],
+      orderBy: 'assessment_date DESC',
+    );
+    return List.generate(maps.length, (i) => Assessment.fromMap(maps[i]));
+  }
+
+  Future<List<Assessment>> getUnassignedAssessments() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'assessments',
+      where: 'assessor_user_id IS NULL OR assessor_user_id = ?',
+      whereArgs: [''],
+      orderBy: 'assessment_date DESC',
+    );
+    return List.generate(maps.length, (i) => Assessment.fromMap(maps[i]));
+  }
 }
