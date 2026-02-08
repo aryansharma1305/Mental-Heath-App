@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:ui';
 import '../theme/app_theme.dart';
-import 'assessment_home_screen.dart';
+import 'home_screen.dart';
 
 class DoctorSetupScreen extends StatefulWidget {
   const DoctorSetupScreen({super.key});
@@ -71,7 +71,7 @@ class _DoctorSetupScreenState extends State<DoctorSetupScreen> with TickerProvid
       if (mounted) {
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
-            pageBuilder: (_, __, ___) => const AssessmentHomeScreen(),
+            pageBuilder: (_, __, ___) => const HomeScreen(),
             transitionsBuilder: (_, animation, __, child) => FadeTransition(opacity: animation, child: child),
             transitionDuration: const Duration(milliseconds: 600),
           ),

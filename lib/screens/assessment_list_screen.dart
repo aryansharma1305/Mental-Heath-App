@@ -3,15 +3,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/assessment.dart';
 import '../services/supabase_service.dart';
+import 'package:mental_capacity_assessment/l10n/app_localizations.dart';
 import 'assessment_detail_screen.dart';
-
 class AssessmentListScreen extends StatefulWidget {
   const AssessmentListScreen({super.key});
 
   @override
   State<AssessmentListScreen> createState() => _AssessmentListScreenState();
 }
-
 class _AssessmentListScreenState extends State<AssessmentListScreen> {
   final SupabaseService _supabaseService = SupabaseService();
   final TextEditingController _searchController = TextEditingController();
@@ -20,7 +19,6 @@ class _AssessmentListScreenState extends State<AssessmentListScreen> {
   List<Assessment> _filteredAssessments = [];
   bool _isLoading = true;
   String _sortBy = 'date_desc';
-
   @override
   void initState() {
     super.initState();
@@ -45,7 +43,7 @@ class _AssessmentListScreenState extends State<AssessmentListScreen> {
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading assessments: $e')),
+          SnackBar(content: Text('${AppLocalizations.of(context)!.errorLoadingAssessments}: $e')),
         );
       }
     }
@@ -111,16 +109,16 @@ class _AssessmentListScreenState extends State<AssessmentListScreen> {
     }
   }
 
-  String _getStatusLabel(String? status) {
+  String _getStatusLabel(BuildContext context, String? status) {
     switch (status) {
       case 'pending':
-        return 'Pending';
+        return AppLocalizations.of(context)!.statusPending;
       case 'reviewed':
-        return 'Reviewed';
+        return AppLocalizations.of(context)!.statusReviewed;
       case 'completed':
-        return 'Completed';
+        return AppLocalizations.of(context)!.statusCompleted;
       default:
-        return 'Unknown';
+        return AppLocalizations.of(context)!.statusUnknown;
     }
   }
 
@@ -128,7 +126,7 @@ class _AssessmentListScreenState extends State<AssessmentListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('All Assessments'),
+        title: Text(AppLocalizations.of(context)!.allAssessments),
         actions: [
           PopupMenuButton<String>(
             onSelected: (value) {
@@ -136,21 +134,21 @@ class _AssessmentListScreenState extends State<AssessmentListScreen> {
               _sortAssessments();
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'date_desc',
-                child: Text('Sort by Date (Newest)'),
+                child: Text(AppLocalizations.of(context)!.sortByDateNewest),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'date_asc',
-                child: Text('Sort by Date (Oldest)'),
+                child: Text(AppLocalizations.of(context)!.sortByDateOldest),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'name_asc',
-                child: Text('Sort by Name (A-Z)'),
+                child: Text(AppLocalizations.of(context)!.sortByNameAZ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'name_desc',
-                child: Text('Sort by Name (Z-A)'),
+                child: Text(AppLocalizations.of(context)!.sortByNameZA),
               ),
             ],
           ),
@@ -164,7 +162,7 @@ class _AssessmentListScreenState extends State<AssessmentListScreen> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search by patient name, ID, or assessor...',
+                hintText: AppLocalizations.of(context)!.searchHint,
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
@@ -186,7 +184,7 @@ class _AssessmentListScreenState extends State<AssessmentListScreen> {
             child: Row(
               children: [
                 Text(
-                  '${_filteredAssessments.length} assessment${_filteredAssessments.length != 1 ? 's' : ''}',
+                  AppLocalizations.of(context)!.assessmentsCount(_filteredAssessments.length),
                   style: const TextStyle(
                     color: Colors.grey,
                     fontSize: 14,
@@ -215,8 +213,8 @@ class _AssessmentListScreenState extends State<AssessmentListScreen> {
                             const SizedBox(height: 16),
                             Text(
                               _searchController.text.isNotEmpty
-                                  ? 'No assessments found'
-                                  : 'No assessments yet',
+                                  ? AppLocalizations.of(context)!.noAssessmentsFound
+                                  : AppLocalizations.of(context)!.noAssessmentsYet,
                               style: const TextStyle(
                                 fontSize: 18,
                                 color: Colors.grey,
@@ -225,8 +223,8 @@ class _AssessmentListScreenState extends State<AssessmentListScreen> {
                             const SizedBox(height: 8),
                             Text(
                               _searchController.text.isNotEmpty
-                                  ? 'Try adjusting your search terms'
-                                  : 'Create your first assessment',
+                                  ? AppLocalizations.of(context)!.adjustSearchTerms
+                                  : AppLocalizations.of(context)!.createFirstAssessment,
                               style: const TextStyle(color: Colors.grey),
                             ),
                           ],
@@ -284,7 +282,7 @@ class _AssessmentListScreenState extends State<AssessmentListScreen> {
                                               borderRadius: BorderRadius.circular(12),
                                             ),
                                             child: Text(
-                                              _getStatusLabel(assessment.status),
+                                              _getStatusLabel(context, assessment.status),
                                               style: GoogleFonts.inter(
                                                 color: Colors.white,
                                                 fontSize: 11,

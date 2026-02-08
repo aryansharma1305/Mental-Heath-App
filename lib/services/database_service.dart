@@ -3,11 +3,12 @@ import 'package:path/path.dart';
 import '../models/assessment.dart';
 import '../models/question.dart';
 import '../models/user.dart';
+import 'supabase_service.dart';
 
 class DatabaseService {
   static Database? _database;
   static const String _databaseName = 'mental_capacity_assessments.db';
-  static const int _databaseVersion = 2;
+  static const int _databaseVersion = 3;
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -137,11 +138,76 @@ class DatabaseService {
         // Columns might already exist
       }
     }
+
+    if (oldVersion < 3) {
+      try {
+        await db.execute('ALTER TABLE assessments ADD COLUMN is_synced INTEGER DEFAULT 0');
+      } catch (e) {
+        // Column might already exist
+      }
+    }
   }
 
   Future<int> insertAssessment(Assessment assessment) async {
     final db = await database;
-    return await db.insert('assessments', assessment.toMap());
+    try {
+      // 1. Insert locally first (offline-first)
+      final id = await db.insert('assessments', assessment.toMap());
+      
+      // 2. Try to sync to Supabase if available
+      try {
+        if (SupabaseService.isAvailable) {
+          final supabaseId = await SupabaseService().insertAssessment(assessment);
+          if (supabaseId != null) {
+            // Update local record to synced
+            await db.update(
+              'assessments',
+              {'is_synced': 1},
+              where: 'id = ?',
+              whereArgs: [id],
+            );
+          }
+        }
+      } catch (e) {
+        // Silent failure for sync - will be picked up by background sync later
+        print('Sync failed: $e');
+      }
+      
+      return id;
+    } catch (e) {
+      print('Insert failed: $e');
+      return -1;
+    }
+  }
+
+  Future<void> syncPendingAssessments() async {
+    final db = await database;
+    try {
+      if (!SupabaseService.isAvailable) return;
+
+      // Get all unsynced assessments
+      final List<Map<String, dynamic>> maps = await db.query(
+        'assessments',
+        where: 'is_synced = 0 OR is_synced IS NULL',
+      );
+
+      for (var map in maps) {
+        final assessment = Assessment.fromMap(map);
+        try {
+          await SupabaseService().insertAssessment(assessment);
+          await db.update(
+            'assessments',
+            {'is_synced': 1},
+            where: 'id = ?',
+            whereArgs: [assessment.id],
+          );
+        } catch (e) {
+          print('Failed to sync assessment ${assessment.id}: $e');
+        }
+      }
+    } catch (e) {
+      print('Sync Error: $e');
+    }
   }
 
   Future<List<Assessment>> getAllAssessments() async {

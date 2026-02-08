@@ -11,10 +11,6 @@ import 'doctor_review_screen.dart';
 import 'assessment_list_screen.dart';
 import 'assessment_detail_screen.dart';
 import 'analytics_screen.dart';
-import 'patient_management_screen.dart';
-import 'doctor_analytics_screen.dart';
-import 'assessment_templates_screen.dart';
-import 'quick_notes_screen.dart';
 
 class DoctorDashboardScreen extends StatefulWidget {
   const DoctorDashboardScreen({super.key});
@@ -327,19 +323,6 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
               },
             ),
             _buildActionCard(
-              'Patient Management',
-              Icons.people,
-              AppTheme.successGreen,
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const PatientManagementScreen(),
-                  ),
-                );
-              },
-            ),
-            _buildActionCard(
               'My Analytics',
               Icons.analytics,
               AppTheme.warningOrange,
@@ -347,33 +330,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const DoctorAnalyticsScreen(),
-                  ),
-                );
-              },
-            ),
-            _buildActionCard(
-              'Templates',
-              Icons.description,
-              Colors.purple,
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AssessmentTemplatesScreen(),
-                  ),
-                );
-              },
-            ),
-            _buildActionCard(
-              'Quick Notes',
-              Icons.note_add,
-              Colors.teal,
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const QuickNotesScreen(),
+                    builder: (context) => const AnalyticsScreen(),
                   ),
                 );
               },

@@ -21,10 +21,8 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
   final _pageController = PageController();
   final AuthService _authService = AuthService();
 
-  // Patient info
-  final _patientNameController = TextEditingController();
-  final _patientAgeController = TextEditingController();
-  String _patientSex = 'Male';
+  // Patient info - anonymised (only ID)
+  final _patientIdController = TextEditingController();
 
   List<Question> _questions = [];
   final Map<String, int> _responses = {}; // questionId -> score (0-4)
@@ -52,20 +50,10 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
   }
 
   void _startAssessment() {
-    if (_patientNameController.text.trim().isEmpty) {
+    if (_patientIdController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please enter patient name'),
-          backgroundColor: AppTheme.errorRed,
-        ),
-      );
-      return;
-    }
-    
-    if (_patientAgeController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter patient age'),
+          content: Text('Please enter anonymised patient ID'),
           backgroundColor: AppTheme.errorRed,
         ),
       );
@@ -151,15 +139,15 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
       // Get current user
       final currentUser = await _authService.getCurrentUserModel();
       
-      // Prepare assessment data
+      // Prepare assessment data (anonymised - no names)
       final assessmentData = {
-        'patient_name': _patientNameController.text.trim(),
-        'patient_age': int.tryParse(_patientAgeController.text) ?? 0,
-        'patient_sex': _patientSex,
+        'patient_id': _patientIdController.text.trim(),
+        'patient_name': 'Anonymised', // Privacy: No names stored
         'assessment_date': DateTime.now().toIso8601String(),
         'assessor_id': currentUser?.id ?? 'unknown',
         'assessor_name': currentUser?.fullName ?? 'Unknown',
-        'responses': _responses,
+        'responses': stringResponses, // Store as readable strings
+        'responses_raw': _responses, // Also keep raw scores for calculations
         'total_score': totalScore,
         'domain_scores': domainScores,
         'severity': severity,
@@ -224,7 +212,7 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildResultRow('Patient', _patientNameController.text),
+              _buildResultRow('Anonymised ID', _patientIdController.text),
               _buildResultRow('Total Score', '$totalScore / 92'),
               _buildResultRow('Severity', severity),
               const SizedBox(height: 16),
@@ -289,9 +277,7 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
 
   void _resetAssessment() {
     setState(() {
-      _patientNameController.clear();
-      _patientAgeController.clear();
-      _patientSex = 'Male';
+      _patientIdController.clear();
       _responses.clear();
       _currentPage = 0;
       _showPatientInfo = true;
@@ -377,7 +363,7 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
                         ),
                       ),
                       Text(
-                        'Enter details before starting assessment',
+                        'Enter details before starting assessment (anonymised)',
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           color: AppTheme.textGrey,
@@ -392,9 +378,9 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
           
           const SizedBox(height: 32),
           
-          // Patient Name
+          // Anonymised Patient ID
           Text(
-            'Patient Name',
+            'Anonymised Patient ID',
             style: GoogleFonts.inter(
               fontWeight: FontWeight.w600,
               color: AppTheme.textDark,
@@ -402,10 +388,10 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
           ),
           const SizedBox(height: 8),
           TextFormField(
-            controller: _patientNameController,
+            controller: _patientIdController,
             decoration: InputDecoration(
-              hintText: 'Enter full name',
-              prefixIcon: const Icon(Icons.person_outline),
+              hintText: 'Enter anonymous ID (no names)',
+              prefixIcon: const Icon(Icons.badge_outlined),
               filled: true,
               fillColor: Colors.white,
               border: OutlineInputBorder(
@@ -414,90 +400,6 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
               ),
             ),
           ).animate().fadeIn(delay: 100.ms).slideX(begin: -0.1, end: 0),
-          
-          const SizedBox(height: 24),
-          
-          // Age and Sex row
-          Row(
-            children: [
-              // Age
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Age',
-                      style: GoogleFonts.inter(
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textDark,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _patientAgeController,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        hintText: 'Years',
-                        prefixIcon: const Icon(Icons.cake_outlined),
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ).animate().fadeIn(delay: 200.ms).slideX(begin: -0.1, end: 0),
-              
-              const SizedBox(width: 16),
-              
-              // Sex
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Sex',
-                      style: GoogleFonts.inter(
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textDark,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: DropdownButtonFormField<String>(
-                        value: _patientSex,
-                        decoration: InputDecoration(
-                          prefixIcon: Icon(
-                            _patientSex == 'Male' ? Icons.male : Icons.female,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                        items: ['Male', 'Female'].map((sex) {
-                          return DropdownMenuItem(
-                            value: sex,
-                            child: Text(sex),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() => _patientSex = value!);
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ).animate().fadeIn(delay: 300.ms).slideX(begin: 0.1, end: 0),
-            ],
-          ),
           
           const SizedBox(height: 32),
           
@@ -881,8 +783,7 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
   @override
   void dispose() {
     _pageController.dispose();
-    _patientNameController.dispose();
-    _patientAgeController.dispose();
+    _patientIdController.dispose();
     _animationController.dispose();
     super.dispose();
   }

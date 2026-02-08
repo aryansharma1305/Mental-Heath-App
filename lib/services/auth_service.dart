@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,12 +11,75 @@ import '../models/user_role.dart';
 import 'supabase_service.dart';
 import 'database_service.dart';
 
+// Helper for secure storage with macOS fallback
+class _SecureStorageHelper {
+  static final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  static bool _useFallback = false;
+  
+  static Future<void> write({required String key, required String value}) async {
+    if (_useFallback || Platform.isMacOS) {
+      // Use SharedPreferences on macOS as fallback
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('_secure_$key', value);
+      } catch (e) {
+        debugPrint('SharedPreferences fallback write error: $e');
+      }
+      return;
+    }
+    try {
+      await _secureStorage.write(key: key, value: value);
+    } catch (e) {
+      debugPrint('SecureStorage error: $e, falling back to SharedPreferences');
+      _useFallback = true;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('_secure_$key', value);
+    }
+  }
+  
+  static Future<String?> read({required String key}) async {
+    if (_useFallback || Platform.isMacOS) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        return prefs.getString('_secure_$key');
+      } catch (e) {
+        return null;
+      }
+    }
+    try {
+      return await _secureStorage.read(key: key);
+    } catch (e) {
+      debugPrint('SecureStorage error: $e, falling back to SharedPreferences');
+      _useFallback = true;
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('_secure_$key');
+    }
+  }
+  
+  static Future<void> delete({required String key}) async {
+    if (_useFallback || Platform.isMacOS) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('_secure_$key');
+      } catch (e) {
+        // Ignore
+      }
+      return;
+    }
+    try {
+      await _secureStorage.delete(key: key);
+    } catch (e) {
+      _useFallback = true;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('_secure_$key');
+    }
+  }
+}
+
 class AuthService {
   static final AuthService _instance = AuthService._internal();
   factory AuthService() => _instance;
   AuthService._internal();
-
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   final SupabaseService _supabaseService = SupabaseService();
   
   String? _currentToken;
@@ -30,7 +94,7 @@ class AuthService {
   // Check if user is authenticated
   Future<bool> isAuthenticated() async {
     try {
-      final token = await _secureStorage.read(key: 'auth_token');
+      final token = await _SecureStorageHelper.read(key: 'auth_token');
       if (token == null) return false;
 
       // Check if token is expired
@@ -66,7 +130,7 @@ class AuthService {
           // Password matches or no hash stored (first login)
           // Generate token
           final token = _generateLocalToken(username);
-          await _secureStorage.write(key: 'auth_token', value: token);
+          await _SecureStorageHelper.write(key: 'auth_token', value: token);
           
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('username', user.username);
@@ -157,7 +221,7 @@ class AuthService {
 
         // Generate token
         final token = _generateLocalToken(username);
-        await _secureStorage.write(key: 'auth_token', value: token);
+        await _SecureStorageHelper.write(key: 'auth_token', value: token);
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('username', user.username);
@@ -213,7 +277,7 @@ class AuthService {
     if (storedUsername == username && storedPassword == _hashPassword(password)) {
       // Generate a simple token for local use
       final token = _generateLocalToken(username);
-      await _secureStorage.write(key: 'auth_token', value: token);
+      await _SecureStorageHelper.write(key: 'auth_token', value: token);
       _currentToken = token;
       _currentUser = {
         'username': username,
@@ -288,7 +352,7 @@ class AuthService {
 
     // Generate token
     final token = _generateLocalToken(username);
-    await _secureStorage.write(key: 'auth_token', value: token);
+    await _SecureStorageHelper.write(key: 'auth_token', value: token);
     _currentToken = token;
     _currentUserModel = user;
     _currentUser = {
@@ -309,8 +373,8 @@ class AuthService {
   // Logout
   Future<void> logout() async {
     try {
-      await _secureStorage.delete(key: 'auth_token');
-      await _secureStorage.delete(key: 'refresh_token');
+      await _SecureStorageHelper.delete(key: 'auth_token');
+      await _SecureStorageHelper.delete(key: 'refresh_token');
       
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('username');
@@ -327,11 +391,11 @@ class AuthService {
   // Refresh token
   Future<bool> refreshToken() async {
     try {
-      final refreshToken = await _secureStorage.read(key: 'refresh_token');
+      final refreshToken = await _SecureStorageHelper.read(key: 'refresh_token');
       if (refreshToken == null) return false;
 
       // For now, just regenerate token if not expired
-      final token = await _secureStorage.read(key: 'auth_token');
+      final token = await _SecureStorageHelper.read(key: 'auth_token');
       if (token != null && !JwtDecoder.isExpired(token)) {
         return true;
       }

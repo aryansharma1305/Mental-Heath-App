@@ -183,11 +183,12 @@ class SupabaseService {
 
   // ========== ASSESSMENT OPERATIONS ==========
   
-  Future<int> insertAssessment(Assessment assessment, {String? assessorUserId}) async {
+  Future<int?> insertAssessment(Assessment assessment, {String? assessorUserId}) async {
     if (!isAvailable) {
       throw Exception('Supabase is not available');
     }
-    final response = await client!
+    try {
+      final response = await client!
         .from('assessments')
         .insert({
           'patient_id': assessment.patientId,
@@ -207,6 +208,9 @@ class SupabaseService {
         .single();
     
     return response['id'] as int;
+    } catch (e) {
+      return null;
+    }
   }
 
   Future<List<Assessment>> getAllAssessments() async {

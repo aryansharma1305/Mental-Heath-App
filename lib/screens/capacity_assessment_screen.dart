@@ -7,6 +7,9 @@ import 'dart:ui';
 import '../theme/app_theme.dart';
 import '../models/question.dart';
 import '../services/assessment_questions.dart';
+import '../services/assessment_questions.dart';
+import '../services/tts_service.dart';
+import 'package:mental_capacity_assessment/l10n/app_localizations.dart';
 
 class CapacityAssessmentScreen extends StatefulWidget {
   const CapacityAssessmentScreen({super.key});
@@ -17,9 +20,7 @@ class CapacityAssessmentScreen extends StatefulWidget {
 
 class _CapacityAssessmentScreenState extends State<CapacityAssessmentScreen> with TickerProviderStateMixin {
   final _pageController = PageController();
-  final _patientNameController = TextEditingController();
-  final _patientAgeController = TextEditingController();
-  String _patientSex = 'Male';
+  final _patientIdController = TextEditingController(); // Anonymised ID only
   String _doctorName = 'Doctor';
   String _doctorId = '';
 
@@ -29,11 +30,13 @@ class _CapacityAssessmentScreenState extends State<CapacityAssessmentScreen> wit
   bool _isSubmitting = false;
   bool _showPatientInfo = true;
   late AnimationController _progressController;
+  final TTSService _ttsService = TTSService();
 
   @override
   void initState() {
     super.initState();
     _progressController = AnimationController(duration: const Duration(milliseconds: 500), vsync: this);
+    _ttsService.init();
     _loadQuestions();
     _loadDoctorProfile();
   }
@@ -42,8 +45,8 @@ class _CapacityAssessmentScreenState extends State<CapacityAssessmentScreen> wit
   void dispose() {
     _progressController.dispose();
     _pageController.dispose();
-    _patientNameController.dispose();
-    _patientAgeController.dispose();
+    _patientIdController.dispose();
+    _ttsService.stop();
     super.dispose();
   }
 
@@ -68,12 +71,8 @@ class _CapacityAssessmentScreenState extends State<CapacityAssessmentScreen> wit
   }
 
   void _startAssessment() {
-    if (_patientNameController.text.trim().isEmpty) {
-      _showError('Please enter patient name');
-      return;
-    }
-    if (_patientAgeController.text.trim().isEmpty) {
-      _showError('Please enter patient age');
+    if (_patientIdController.text.trim().isEmpty) {
+      _showError('Please enter anonymised patient ID');
       return;
     }
     setState(() => _showPatientInfo = false);
@@ -135,15 +134,15 @@ class _CapacityAssessmentScreenState extends State<CapacityAssessmentScreen> wit
               child: Icon(Icons.warning_amber_rounded, color: AppTheme.errorRed),
             ),
             const SizedBox(width: 12),
-            Text('Critical Alert', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: AppTheme.errorRed)),
+            Text(AppLocalizations.of(context)!.criticalAlertTitle, style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: AppTheme.errorRed)),
           ],
         ),
-        content: Text('Patient has reported thoughts of self-harm. Immediate clinical assessment is recommended.', style: GoogleFonts.inter()),
+        content: Text(AppLocalizations.of(context)!.criticalAlertMessage, style: GoogleFonts.inter()),
         actions: [
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorRed),
-            child: Text('Acknowledged', style: GoogleFonts.inter(color: Colors.white)),
+            child: Text(AppLocalizations.of(context)!.acknowledged, style: GoogleFonts.inter(color: Colors.white)),
           ),
         ],
       ),
@@ -163,9 +162,8 @@ class _CapacityAssessmentScreenState extends State<CapacityAssessmentScreen> wit
       final assessmentData = {
         'assessment_id': 'DSM_${DateTime.now().millisecondsSinceEpoch}',
         'doctor_id': _doctorId,
-        'patient_name': _patientNameController.text.trim(),
-        'patient_age': int.tryParse(_patientAgeController.text) ?? 0,
-        'patient_sex': _patientSex,
+        'patient_id': _patientIdController.text.trim(),
+        'patient_name': 'Anonymised', // Privacy: No identifiable info
         'assessment_date': DateTime.now().toIso8601String(),
         'assessor_name': _doctorName,
         'responses': _responses,
@@ -219,15 +217,15 @@ class _CapacityAssessmentScreenState extends State<CapacityAssessmentScreen> wit
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text('${score.toInt()}', style: GoogleFonts.poppins(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.white)),
-                        Text('Score', style: GoogleFonts.inter(fontSize: 12, color: Colors.white70)),
+                        Text(AppLocalizations.of(context)!.scoreLabel, style: GoogleFonts.inter(fontSize: 12, color: Colors.white70)),
                       ],
                     ),
                   ),
                 ).animate().scale(duration: 500.ms, curve: Curves.easeOutBack),
                 const SizedBox(height: 20),
-                Text('Assessment Complete', style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.bold)),
+                Text(AppLocalizations.of(context)!.assessmentComplete, style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                Text(_patientNameController.text, style: GoogleFonts.inter(fontSize: 16, color: AppTheme.textGrey)),
+                Text('${AppLocalizations.of(context)!.anonymisedId}: ${_patientIdController.text}', style: GoogleFonts.inter(fontSize: 16, color: AppTheme.textGrey)),
                 const SizedBox(height: 20),
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -249,7 +247,7 @@ class _CapacityAssessmentScreenState extends State<CapacityAssessmentScreen> wit
                         Row(children: [
                           Icon(Icons.priority_high, color: AppTheme.warningOrange),
                           const SizedBox(width: 8),
-                          Text('Level 2 Assessment Recommended', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.warningOrange)),
+                          Text(AppLocalizations.of(context)!.level2Recommended, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.warningOrange)),
                         ]),
                         const SizedBox(height: 8),
                         Wrap(
@@ -266,7 +264,7 @@ class _CapacityAssessmentScreenState extends State<CapacityAssessmentScreen> wit
                   ),
                 ],
                 const SizedBox(height: 16),
-                Text('Domain Breakdown', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600)),
+                Text(AppLocalizations.of(context)!.domainBreakdown, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 ...domainScores.entries.map((e) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
@@ -285,7 +283,7 @@ class _CapacityAssessmentScreenState extends State<CapacityAssessmentScreen> wit
                     child: OutlinedButton(
                       onPressed: () { Navigator.pop(context); Navigator.pop(context, true); },
                       style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
-                      child: Text('Done', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                      child: Text(AppLocalizations.of(context)!.done, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -297,7 +295,7 @@ class _CapacityAssessmentScreenState extends State<CapacityAssessmentScreen> wit
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
-                      child: Text('New', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white)),
+                      child: Text(AppLocalizations.of(context)!.newAssessmentButton, style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white)),
                     ),
                   ),
                 ]),
@@ -311,9 +309,7 @@ class _CapacityAssessmentScreenState extends State<CapacityAssessmentScreen> wit
 
   void _resetAssessment() {
     setState(() {
-      _patientNameController.clear();
-      _patientAgeController.clear();
-      _patientSex = 'Male';
+      _patientIdController.clear();
       _responses.clear();
       _currentPage = 0;
       _showPatientInfo = true;
@@ -369,8 +365,8 @@ class _CapacityAssessmentScreenState extends State<CapacityAssessmentScreen> wit
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('DSM-5 Assessment', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                Text('Cross-Cutting Symptom Measure', style: GoogleFonts.inter(fontSize: 12, color: Colors.white70)),
+                Text(AppLocalizations.of(context)!.assessmentTitle, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                Text(AppLocalizations.of(context)!.assessmentSubtitle, style: GoogleFonts.inter(fontSize: 12, color: Colors.white70)),
               ],
             ),
           ),
@@ -416,36 +412,14 @@ class _CapacityAssessmentScreenState extends State<CapacityAssessmentScreen> wit
                   Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(gradient: LinearGradient(colors: [const Color(0xFF667eea), const Color(0xFF764ba2)]), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.person_add, color: Colors.white)),
                   const SizedBox(width: 14),
                   Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('Patient Information', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
-                    Text('Enter details to begin', style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textGrey)),
+                    Text(AppLocalizations.of(context)!.patientInfoTitle, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text(AppLocalizations.of(context)!.patientInfoSubtitle, style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textGrey)),
                   ]),
                 ]),
                 const SizedBox(height: 24),
-                Text('Full Name', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textDark)),
+                Text(AppLocalizations.of(context)!.enterIdLabel, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textDark)),
                 const SizedBox(height: 8),
-                TextField(controller: _patientNameController, textCapitalization: TextCapitalization.words, decoration: _inputDecoration('Enter patient name', Icons.person_outline)),
-                const SizedBox(height: 16),
-                Row(children: [
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('Age', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textDark)),
-                    const SizedBox(height: 8),
-                    TextField(controller: _patientAgeController, keyboardType: TextInputType.number, decoration: _inputDecoration('Years', Icons.cake_outlined)),
-                  ])),
-                  const SizedBox(width: 16),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('Sex', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textDark)),
-                    const SizedBox(height: 8),
-                    Container(
-                      decoration: BoxDecoration(color: const Color(0xFFF8F9FA), borderRadius: BorderRadius.circular(14)),
-                      child: DropdownButtonFormField<String>(
-                        value: _patientSex,
-                        decoration: const InputDecoration(border: InputBorder.none, contentPadding: EdgeInsets.symmetric(horizontal: 16)),
-                        items: ['Male', 'Female', 'Other'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-                        onChanged: (v) => setState(() => _patientSex = v!),
-                      ),
-                    ),
-                  ])),
-                ]),
+                TextField(controller: _patientIdController, decoration: _inputDecoration(AppLocalizations.of(context)!.enterIdHint, Icons.badge_outlined)),
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
@@ -458,7 +432,7 @@ class _CapacityAssessmentScreenState extends State<CapacityAssessmentScreen> wit
                       elevation: 5,
                     ),
                     child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      Text('Start Assessment', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
+                      Text(AppLocalizations.of(context)!.startAssessment, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
                       const SizedBox(width: 8),
                       const Icon(Icons.arrow_forward, color: Colors.white),
                     ]),
@@ -478,7 +452,7 @@ class _CapacityAssessmentScreenState extends State<CapacityAssessmentScreen> wit
                 child: Row(children: [
                   const Icon(Icons.info_outline, color: Colors.white, size: 20),
                   const SizedBox(width: 12),
-                  Expanded(child: Text('DSM-5 Cross-Cutting Measure: 23 questions across 13 psychiatric domains', style: GoogleFonts.inter(fontSize: 12, color: Colors.white))),
+                  Expanded(child: Text(AppLocalizations.of(context)!.dsm5Info, style: GoogleFonts.inter(fontSize: 12, color: Colors.white))),
                 ]),
               ),
             ),
@@ -529,9 +503,21 @@ class _CapacityAssessmentScreenState extends State<CapacityAssessmentScreen> wit
                   child: Text(question.category ?? 'Question', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF667eea))),
                 ),
                 const SizedBox(height: 16),
-                Text('During the past TWO (2) WEEKS, how much have you been bothered by:', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textGrey)),
+                Text(AppLocalizations.of(context)!.pastTwoWeeks, style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textGrey)),
                 const SizedBox(height: 8),
-                Text(question.text, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: AppTheme.textDark, height: 1.4)),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(question.text, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: AppTheme.textDark, height: 1.4)),
+                    ),
+                    IconButton(
+                      onPressed: () => _ttsService.speak(question.text),
+                      icon: const Icon(Icons.volume_up_rounded, color: Color(0xFF667eea)),
+                      tooltip: 'Read Aloud',
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 24),
                 ...List.generate(options.length, (i) {
                   final option = options[i];
@@ -585,7 +571,7 @@ class _CapacityAssessmentScreenState extends State<CapacityAssessmentScreen> wit
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
                       const Icon(Icons.arrow_back, color: Colors.white, size: 18),
                       const SizedBox(width: 8),
-                      Text('Previous', style: GoogleFonts.inter(fontSize: 14, color: Colors.white)),
+                      Text(AppLocalizations.of(context)!.previous, style: GoogleFonts.inter(fontSize: 14, color: Colors.white)),
                     ]),
                   ),
                 ),

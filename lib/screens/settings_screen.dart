@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../theme/app_theme.dart';
 import '../services/language_service.dart';
+import '../main.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -63,6 +64,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _selectedLanguage = language;
     });
+
+    // Update app-wide locale
+    if (mounted) {
+      MentalCapacityAssessmentApp.setLocale(context, language.locale);
+    }
     
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

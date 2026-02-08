@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:mental_capacity_assessment/l10n/app_localizations.dart';
 import '../models/assessment.dart';
 import '../models/user_role.dart';
 import '../services/database_service.dart';
@@ -19,7 +20,7 @@ import 'analytics_screen.dart';
 import 'help_support_screen.dart';
 import 'doctor_dashboard_screen.dart';
 import 'dsm5_assessment_screen.dart';
-import 'responses_viewer_screen.dart';
+import 'dsm5_responses_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -297,14 +298,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Today',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: AppTheme.textGrey,
-                          ),
-                        ),
+                            Text(
+                              '${AppLocalizations.of(context)!.doctorWelcome},',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                color: Colors.white.withOpacity(0.9),
+                              ),
+                            ),
                         Text(
                           DateFormat('EEEE, MMMM d, y').format(DateTime.now()),
                           style: GoogleFonts.poppins(
@@ -344,12 +344,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-              Text(
-                'Recent Activity',
-                style: GoogleFonts.poppins(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                  color: AppTheme.textDark,
+                  Text(
+                    AppLocalizations.of(context)!.recentActivity,
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textDark,
                     ),
                   ),
                   TextButton(
@@ -442,7 +442,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => const ResponsesViewerScreen(),
+                builder: (context) => const DSM5ResponsesScreen(),
               ),
             );
           },
@@ -497,7 +497,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => const ResponsesViewerScreen(),
+                builder: (context) => const DSM5ResponsesScreen(),
               ),
             );
           },

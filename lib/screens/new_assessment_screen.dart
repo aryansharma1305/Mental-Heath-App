@@ -20,7 +20,6 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
   
   // Form controllers
   final _patientIdController = TextEditingController();
-  final _patientNameController = TextEditingController();
   final _decisionContextController = TextEditingController();
   final _recommendationsController = TextEditingController();
   
@@ -85,7 +84,7 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
       
       final assessment = Assessment(
         patientId: _patientIdController.text,
-        patientName: _patientNameController.text,
+        patientName: 'Anonymised', // Privacy: No names stored
         assessmentDate: _assessmentDate,
         assessorName: _assessorName,
         assessorRole: _assessorRole,
@@ -206,26 +205,13 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
           TextFormField(
             controller: _patientIdController,
             decoration: const InputDecoration(
-              labelText: 'Patient ID/NHS Number',
+              labelText: 'Anonymised Patient ID',
+              helperText: 'For privacy, no names are stored',
               prefixIcon: Icon(Icons.badge),
             ),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Please enter patient ID';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _patientNameController,
-            decoration: const InputDecoration(
-              labelText: 'Patient Name',
-              prefixIcon: Icon(Icons.person),
-            ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter patient name';
               }
               return null;
             },
@@ -405,6 +391,14 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
   }
 
   Widget _buildSummaryPage() {
+    // Calculate domain scores from responses
+    final responseMap = _responses.map((key, value) => MapEntry(key, value.toMap()));
+    final scoreData = AssessmentQuestions.calculateCapacityScore(responseMap);
+    final domainScores = scoreData['categoryScores'] as Map<String, int>? ?? {};
+    final flaggedDomains = AssessmentQuestions.getDomainsRequiringFollowUp(domainScores);
+    final percentage = scoreData['percentage'] as double;
+    final recommendations = AssessmentQuestions.getRecommendations(percentage, domainScores);
+    
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -414,7 +408,182 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
             'Assessment Summary',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
+          const SizedBox(height: 16),
+          
+          // DSM-5 Domain Scores Card
+          Card(
+            color: Colors.blue.shade50,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.assessment, color: Colors.blue.shade700),
+                      const SizedBox(width: 8),
+                      Text(
+                        'DSM-5 Cross-Cutting Symptom Measure Results',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade800,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  // Domain scores grid
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: domainScores.entries.map((entry) {
+                      final isFlagged = flaggedDomains.contains(entry.key);
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isFlagged ? Colors.red.shade100 : Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isFlagged ? Colors.red.shade400 : Colors.grey.shade300,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              entry.key.split('.').last.trim(),
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: isFlagged ? Colors.red.shade800 : Colors.grey.shade700,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${entry.value}',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: isFlagged ? Colors.red.shade700 : Colors.blue.shade700,
+                              ),
+                            ),
+                            if (isFlagged)
+                              Text(
+                                '⚠ Flagged',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.red.shade600,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 12),
+                  // Scoring legend
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Text(
+                      'Scoring: 0=None, 1=Slight, 2=Mild, 3=Moderate, 4=Severe\n'
+                      'Flagged: Substance Use/Psychosis/Suicidal Ideation ≥1, Others ≥2',
+                      style: TextStyle(fontSize: 10, fontStyle: FontStyle.italic),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          // Flagged Domains Alert
+          if (flaggedDomains.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Card(
+              color: Colors.red.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.warning_amber, color: Colors.red.shade700),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Domains Requiring Detailed Assessment',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red.shade800,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ...flaggedDomains.map((domain) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Row(
+                        children: [
+                          Icon(Icons.arrow_right, size: 16, color: Colors.red.shade600),
+                          Expanded(child: Text(domain, style: const TextStyle(fontSize: 13))),
+                        ],
+                      ),
+                    )),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          
+          // System Recommendations
+          if (recommendations.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Card(
+              color: Colors.orange.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.lightbulb_outline, color: Colors.orange.shade700),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Clinical Recommendations',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange.shade800,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ...recommendations.map((rec) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('• ', style: TextStyle(fontWeight: FontWeight.bold)),
+                          Expanded(child: Text(rec, style: const TextStyle(fontSize: 13))),
+                        ],
+                      ),
+                    )),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          
           const SizedBox(height: 24),
+          
+          // Overall Capacity Assessment
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -428,7 +597,12 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Based on the above DSM-5 results, select the overall capacity determination:',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
+                  const SizedBox(height: 12),
                   ...AssessmentQuestions.getCapacityOptions().map((option) {
                     return RadioListTile<String>(
                       title: Text(option),
@@ -447,8 +621,8 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
           TextFormField(
             controller: _recommendationsController,
             decoration: const InputDecoration(
-              labelText: 'Recommendations and Next Steps',
-              helperText: 'Include any recommendations for future assessments or support',
+              labelText: 'Additional Recommendations and Next Steps',
+              helperText: 'Include any additional recommendations beyond system suggestions',
             ),
             maxLines: 4,
             validator: (value) {
@@ -473,8 +647,7 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Patient: ${_patientNameController.text}'),
-                  Text('ID: ${_patientIdController.text}'),
+                  Text('Anonymised ID: ${_patientIdController.text}'),
                   Text('Date: ${DateFormat('MMMM d, y').format(_assessmentDate)}'),
                   Text('Assessor: $_assessorName'),
                   Text('Decision: ${_decisionContextController.text}'),
@@ -490,7 +663,6 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
   @override
   void dispose() {
     _patientIdController.dispose();
-    _patientNameController.dispose();
     _decisionContextController.dispose();
     _recommendationsController.dispose();
     _pageController.dispose();

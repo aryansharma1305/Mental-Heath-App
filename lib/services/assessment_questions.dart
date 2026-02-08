@@ -229,16 +229,31 @@ class AssessmentQuestions {
     final questions = getStandardQuestions();
     
     for (var entry in responses.entries) {
-      final answer = entry.value as String;
+      int score = 0;
+      
+      // Handle both int and string response formats
+      if (entry.value is int) {
+        // Direct integer score (0-4)
+        score = entry.value as int;
+      } else if (entry.value is String) {
+        // String response - look up in options
+        final answer = entry.value as String;
+        final question = questions.firstWhere(
+          (q) => q.questionId == entry.key,
+          orElse: () => questions.first,
+        );
+        final options = question.options ?? standardOptions;
+        final index = options.indexOf(answer);
+        score = index >= 0 ? index : 0;
+      } else {
+        continue; // Skip unknown types
+      }
+      
+      // Find question for domain lookup
       final question = questions.firstWhere(
         (q) => q.questionId == entry.key,
         orElse: () => questions.first,
       );
-      
-      // Score: None=0, Slight=1, Mild=2, Moderate=3, Severe=4
-      final options = question.options ?? standardOptions;
-      final index = options.indexOf(answer);
-      final score = index >= 0 ? index : 0;
       
       totalScore += score;
       maxScore += 4;
@@ -331,15 +346,19 @@ class AssessmentQuestions {
   }
 
   /// Get domains requiring follow-up based on scores
+  /// Per DSM-5: Flag Substance Use, Suicidal Ideation, and Psychosis at score >= 1 (Slight)
+  /// Other domains flag at score >= 2 (Mild)
   static List<String> getDomainsRequiringFollowUp(Map<String, int> domainScores) {
     List<String> flaggedDomains = [];
     
     domainScores.forEach((domain, score) {
-      // Flag if score is >= 2 (Mild or higher) for most domains
-      // For Suicidal Ideation, flag if score >= 1
-      if (domain.contains('Suicidal') && score >= 1) {
+      // Per DSM-5: Substance Use, Suicidal Ideation, and Psychosis flag at score >= 1
+      if ((domain.contains('Suicidal') || 
+           domain.contains('Substance') || 
+           domain.contains('Psychosis')) && score >= 1) {
         flaggedDomains.add(domain);
       } else if (score >= 2) {
+        // All other domains flag at score >= 2 (Mild)
         flaggedDomains.add(domain);
       }
     });
@@ -348,21 +367,23 @@ class AssessmentQuestions {
   }
 
   /// Get clinical recommendations based on domain scores
+  /// Per DSM-5: Substance Use, Suicidal Ideation, and Psychosis flag at score >= 1
   static List<String> getRecommendations(double percentage, Map<String, int> domainScores) {
     List<String> recommendations = [];
     domainScores.forEach((domain, score) {
+      // Critical domains that flag at score >= 1
       if (domain.contains('Suicidal') && score >= 1) {
         recommendations.add('CRITICAL: Assess for suicide risk immediately');
-      } else if (domain.contains('Psychosis') && score >= 2) {
-        recommendations.add('Consider psychiatric evaluation for psychotic symptoms');
+      } else if (domain.contains('Psychosis') && score >= 1) {
+        recommendations.add('IMPORTANT: Consider psychiatric evaluation for psychotic symptoms - detailed assessment recommended');
+      } else if (domain.contains('Substance') && score >= 1) {
+        recommendations.add('IMPORTANT: Assess substance use patterns - detailed assessment recommended');
       } else if (domain.contains('Depression') && score >= 4) {
         recommendations.add('Screen for depressive disorder (PHQ-9 recommended)');
       } else if (domain.contains('Anxiety') && score >= 4) {
         recommendations.add('Screen for anxiety disorder (GAD-7 recommended)');
       } else if (domain.contains('Mania') && score >= 2) {
         recommendations.add('Screen for bipolar disorder');
-      } else if (domain.contains('Substance') && score >= 1) {
-        recommendations.add('Assess substance use patterns');
       } else if (domain.contains('Sleep') && score >= 2) {
         recommendations.add('Evaluate sleep disturbances');
       }
@@ -406,10 +427,12 @@ class AssessmentQuestions {
       }
     }
     
-    // Threshold is typically "Mild" (2) or higher for most domains
-    // "Slight" (1) for Suicidal Ideation
+    // Per DSM-5: Threshold is "Mild" (2) or higher for most domains
+    // "Slight" (1) for Suicidal Ideation, Psychosis, and Substance Use
     domainHighestScores.forEach((domain, highestScore) {
-      if (domain.contains('Suicidal') && highestScore >= 1) {
+      if ((domain.contains('Suicidal') || 
+           domain.contains('Substance') || 
+           domain.contains('Psychosis')) && highestScore >= 1) {
         domainsNeedingLevel2.add(domain);
       } else if (highestScore >= 2) {
         domainsNeedingLevel2.add(domain);

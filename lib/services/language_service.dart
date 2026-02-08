@@ -10,6 +10,8 @@ enum AppLanguage {
   final String displayName;
   final String code;
   const AppLanguage(this.displayName, this.code);
+
+  Locale get locale => Locale(code);
 }
 
 /// Service to manage language selection and translations

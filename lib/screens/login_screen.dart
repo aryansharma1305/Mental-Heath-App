@@ -7,7 +7,6 @@ import '../widgets/custom_widgets.dart';
 import '../services/auth_service.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
-import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -278,10 +277,18 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               TextButton(
                                 onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const ForgotPasswordScreen(),
+                                  // Show simple dialog for password reset
+                                  showDialog(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      title: const Text('Password Reset'),
+                                      content: const Text('Please contact your system administrator to reset your password.'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(ctx),
+                                          child: const Text('OK'),
+                                        ),
+                                      ],
                                     ),
                                   );
                                 },

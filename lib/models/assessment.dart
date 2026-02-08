@@ -1,3 +1,4 @@
+import 'dart:convert';
 class Assessment {
   final int? id;
   final String patientId;
@@ -17,6 +18,19 @@ class Assessment {
   final String? doctorNotes; // Doctor's review notes
   final int? templateId; // Assessment template ID
   final String? assessorUserId; // UUID of the doctor who created the assessment
+  final bool isSynced; // Local sync status
+
+  /// Generate anonymised ID for privacy-compliant reporting
+  String get anonymisedId {
+    final hash = (id ?? DateTime.now().millisecondsSinceEpoch)
+        .toString()
+        .hashCode
+        .abs()
+        .toRadixString(36)
+        .toUpperCase()
+        .padLeft(6, '0');
+    return 'MCA-$hash';
+  }
 
   Assessment({
     this.id,
@@ -37,6 +51,7 @@ class Assessment {
     this.doctorNotes,
     this.templateId,
     this.assessorUserId,
+    this.isSynced = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -48,7 +63,7 @@ class Assessment {
       'assessor_name': assessorName,
       'assessor_role': assessorRole,
       'decision_context': decisionContext,
-      'responses': responses, // JSONB in Supabase
+      'responses': responses is String ? responses : jsonEncode(responses),
       'overall_capacity': overallCapacity,
       'recommendations': recommendations,
       'created_at': createdAt.toIso8601String(),
@@ -59,6 +74,7 @@ class Assessment {
       'doctor_notes': doctorNotes,
       'template_id': templateId,
       'assessor_user_id': assessorUserId,
+      'is_synced': isSynced ? 1 : 0,
     };
   }
 
@@ -82,6 +98,7 @@ class Assessment {
       doctorNotes: map['doctor_notes'] as String?,
       templateId: map['template_id'] as int?,
       assessorUserId: map['assessor_user_id'] as String?,
+      isSynced: map['is_synced'] == 1,
     );
   }
 
@@ -104,6 +121,7 @@ class Assessment {
     String? doctorNotes,
     int? templateId,
     String? assessorUserId,
+    bool? isSynced,
   }) {
     return Assessment(
       id: id ?? this.id,
@@ -124,6 +142,7 @@ class Assessment {
       doctorNotes: doctorNotes ?? this.doctorNotes,
       templateId: templateId ?? this.templateId,
       assessorUserId: assessorUserId ?? this.assessorUserId,
+      isSynced: isSynced ?? this.isSynced,
     );
   }
 
