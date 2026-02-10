@@ -4,8 +4,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/question.dart';
+import '../models/assessment.dart';
 import '../services/assessment_questions.dart';
 import '../services/auth_service.dart';
+import '../services/database_service.dart';
 import '../theme/app_theme.dart';
 
 class DSM5AssessmentScreen extends StatefulWidget {
@@ -146,6 +148,7 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
         'assessment_date': DateTime.now().toIso8601String(),
         'assessor_id': currentUser?.id ?? 'unknown',
         'assessor_name': currentUser?.fullName ?? 'Unknown',
+        'assessor_role': currentUser?.role.name ?? 'Doctor',
         'responses': stringResponses, // Store as readable strings
         'responses_raw': _responses, // Also keep raw scores for calculations
         'total_score': totalScore,
@@ -178,12 +181,36 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
   }
 
   Future<void> _saveToDatabase(Map<String, dynamic> data) async {
-    // Save to SharedPreferences for local storage
-    final prefs = await SharedPreferences.getInstance();
-    final existingJson = prefs.getStringList('dsm5_assessments') ?? [];
-    existingJson.add(jsonEncode(data));
-    await prefs.setStringList('dsm5_assessments', existingJson);
-    debugPrint('Assessment saved successfully. Total: ${existingJson.length}');
+    try {
+      final assessment = Assessment(
+        patientId: data['patient_id'],
+        patientName: data['patient_name'],
+        assessmentDate: DateTime.parse(data['assessment_date']),
+        assessorName: data['assessor_name'],
+        assessorRole: data['assessor_role'] ?? 'Doctor',
+        assessorUserId: data['assessor_id'] != 'unknown' ? data['assessor_id'] : null,
+        decisionContext: 'DSM-5 Assessment',
+        responses: data['responses'] as Map<String, dynamic>,
+        overallCapacity: data['severity'], // Mapping Severity to Overall Capacity
+        recommendations: (data['flagged_domains'] as List).join(', '),
+        createdAt: DateTime.parse(data['created_at']),
+        updatedAt: DateTime.now(),
+        status: 'completed',
+        isSynced: false,
+      );
+
+      await DatabaseService().insertAssessment(assessment);
+      debugPrint('Assessment saved to database successfully');
+      
+      // Also save to SharedPreferences as backup/legacy support
+      final prefs = await SharedPreferences.getInstance();
+      final existingJson = prefs.getStringList('dsm5_assessments') ?? [];
+      existingJson.add(jsonEncode(data));
+      await prefs.setStringList('dsm5_assessments', existingJson);
+    } catch (e) {
+      debugPrint('Error saving to database: $e');
+      throw e; // Re-throw to be caught by caller
+    }
   }
 
   void _showResultsDialog(int totalScore, String severity, 

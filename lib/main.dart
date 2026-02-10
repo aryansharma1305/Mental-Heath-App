@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -12,7 +13,10 @@ import 'services/language_service.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  runZonedGuarded(() async {
+    print('🚀🚀🚀 APP STARTING - DEBUG MODE 🚀🚀🚀');
+    WidgetsFlutterBinding.ensureInitialized();
+    print('✅ WidgetsFlutterBinding initialized');
   
   // Load environment variables (optional - for future Supabase sync)
   String supabaseUrl = 'https://uikkanfplfjglehpfrwu.supabase.co';
@@ -92,7 +96,13 @@ Future<void> main() async {
     debugPrint('Background sync initialization failed: $e');
   }
 
-  runApp(const MentalCapacityAssessmentApp());
+    print('🚀 runApp called');
+    
+    runApp(const MentalCapacityAssessmentApp());
+  }, (error, stack) {
+    print('❌❌❌ UNCAUGHT ERROR: $error');
+    print(stack);
+  });
 }
 
 class MentalCapacityAssessmentApp extends StatefulWidget {

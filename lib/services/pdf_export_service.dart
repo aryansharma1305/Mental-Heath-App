@@ -102,14 +102,14 @@ class PdfExportService {
       pw.MemoryImage? psychiatryLogo;
       
       try {
-        final engLogoData = await rootBundle.load('assets/logos/engineering_college_logo.png');
+        final engLogoData = await rootBundle.load('assets/logos/images.jpeg');
         engCollegeLogo = pw.MemoryImage(engLogoData.buffer.asUint8List());
       } catch (e) {
         // Logo not available
       }
       
       try {
-        final psyLogoData = await rootBundle.load('assets/logos/psychiatry_dept_logo.png');
+        final psyLogoData = await rootBundle.load('assets/logos/WhatsApp Image 2026-02-09 at 8.47.19 AM.jpeg');
         psychiatryLogo = pw.MemoryImage(psyLogoData.buffer.asUint8List());
       } catch (e) {
         // Logo not available
@@ -201,8 +201,8 @@ class PdfExportService {
                     borderRadius: pw.BorderRadius.circular(4),
                   ),
                   child: pw.Center(
-                    child: pw.Text('ENG\nCOLLEGE', 
-                      style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
+                    child: pw.Text('SRM', 
+                      style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
                       textAlign: pw.TextAlign.center,
                     ),
                   ),
@@ -238,8 +238,8 @@ class PdfExportService {
                     borderRadius: pw.BorderRadius.circular(4),
                   ),
                   child: pw.Center(
-                    child: pw.Text('DEPT OF\nPSYCHIATRY', 
-                      style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
+                    child: pw.Text('PSYCH\nDEPT', 
+                      style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
                       textAlign: pw.TextAlign.center,
                     ),
                   ),

@@ -45,6 +45,9 @@ class DatabaseService {
         status TEXT DEFAULT 'pending',
         reviewed_by TEXT,
         reviewed_at TEXT,
+        doctor_notes TEXT,
+        template_id INTEGER,
+        is_synced INTEGER DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )
@@ -183,30 +186,44 @@ class DatabaseService {
   Future<void> syncPendingAssessments() async {
     final db = await database;
     try {
-      if (!SupabaseService.isAvailable) return;
+      print('🔄 SYNC: Starting syncPendingAssessments...');
+      
+      if (!SupabaseService.isAvailable) {
+        print('❌ SYNC: Supabase is NOT available. Skipping sync.');
+        return;
+      }
 
       // Get all unsynced assessments
       final List<Map<String, dynamic>> maps = await db.query(
         'assessments',
         where: 'is_synced = 0 OR is_synced IS NULL',
       );
+      
+      print('🔄 SYNC: Found ${maps.length} unsynced assessments');
 
       for (var map in maps) {
         final assessment = Assessment.fromMap(map);
         try {
-          await SupabaseService().insertAssessment(assessment);
-          await db.update(
-            'assessments',
-            {'is_synced': 1},
-            where: 'id = ?',
-            whereArgs: [assessment.id],
-          );
+          print('🔄 SYNC: Attempting to sync assessment ${assessment.id}...');
+          final supabaseId = await SupabaseService().insertAssessment(assessment);
+          
+          if (supabaseId != null) {
+            print('✅ SYNC: Assessment ${assessment.id} synced to Supabase (ID: $supabaseId)');
+            await db.update(
+              'assessments',
+              {'is_synced': 1},
+              where: 'id = ?',
+              whereArgs: [assessment.id],
+            );
+          } else {
+             print('❌ SYNC: Failed to sync assessment ${assessment.id} - Insert returned null');
+          }
         } catch (e) {
-          print('Failed to sync assessment ${assessment.id}: $e');
+          print('❌ SYNC: Exception syncing assessment ${assessment.id}: $e');
         }
       }
     } catch (e) {
-      print('Sync Error: $e');
+      print('❌ SYNC: Critical Error: $e');
     }
   }
 

@@ -9,6 +9,7 @@ import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/assessment_questions.dart';
 import '../models/assessment.dart';
+import '../services/database_service.dart';
 import '../services/pdf_export_service.dart';
 
 class DSM5ResponsesScreen extends StatefulWidget {
@@ -50,27 +51,32 @@ class _DSM5ResponsesScreenState extends State<DSM5ResponsesScreen> {
       final currentUser = await _authService.getCurrentUserModel();
       _currentDoctorId = currentUser?.id;
 
-      // Load from SharedPreferences
-      final prefs = await SharedPreferences.getInstance();
-      final assessmentsJson = prefs.getStringList('dsm5_assessments') ?? [];
-      
+      // Load from Database
+      List<Assessment> dbAssessments = [];
+      if (_currentDoctorId != null) {
+        dbAssessments = await DatabaseService().getAssessmentsByAssessorId(_currentDoctorId!);
+      } else {
+        // Fallback or local only mode
+        dbAssessments = await DatabaseService().getAllAssessments();
+      }
+
       final List<Map<String, dynamic>> loadedAssessments = [];
-      
-      for (var json in assessmentsJson) {
+
+      for (var assessment in dbAssessments) {
+        // Filter for DSM-5 assessments
+        if (assessment.decisionContext != 'DSM-5 Assessment') continue;
+
         try {
-          final data = jsonDecode(json) as Map<String, dynamic>;
+          final data = assessment.toMap();
           
-          // Filter by doctor ID - show all for logged-in doctor
-          final assessorId = data['assessor_id'] as String?;
-          if (_currentDoctorId != null && 
-              assessorId != null && 
-              assessorId != _currentDoctorId &&
-              assessorId != 'unknown') {
-            continue; // Skip assessments from other doctors
-          }
-          
+          // Reconstruct extra fields needed for UI
+          data['total_score'] = _calculateTotalScore(assessment.responses);
+          data['severity'] = assessment.overallCapacity; // We mapped severity here
+          data['domain_scores'] = _calculateDomainScores(assessment.responses);
+          data['flagged_domains'] = assessment.recommendations.split(', ').where((e) => e.isNotEmpty).toList();
+           
           // Calculate highest domain score for display
-          final domainScores = data['domain_scores'] as Map<String, dynamic>? ?? {};
+          final domainScores = data['domain_scores'] as Map<String, dynamic>;
           int highestScore = 0;
           String highestDomain = '';
           domainScores.forEach((domain, score) {
@@ -85,22 +91,19 @@ class _DSM5ResponsesScreenState extends State<DSM5ResponsesScreen> {
           
           loadedAssessments.add(data);
         } catch (e) {
-          debugPrint('Error parsing assessment: $e');
+          debugPrint('Error parsing assessment ${assessment.id}: $e');
         }
       }
       
-      // Sort by date (newest first)
-      loadedAssessments.sort((a, b) {
-        final dateA = DateTime.tryParse(a['assessment_date'] ?? '') ?? DateTime.now();
-        final dateB = DateTime.tryParse(b['assessment_date'] ?? '') ?? DateTime.now();
-        return dateB.compareTo(dateA);
-      });
-      
       setState(() {
         _allAssessments = loadedAssessments;
-        _filteredAssessments = loadedAssessments;
+        _filteredAssessments = loadedAssessments; // Initial sort will happen in _applyFilters if called, or here
         _isLoading = false;
       });
+      
+      // Apply initial sort/filter
+      _applyFilters();
+      
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
@@ -109,6 +112,35 @@ class _DSM5ResponsesScreenState extends State<DSM5ResponsesScreen> {
         );
       }
     }
+  }
+
+  int _calculateTotalScore(Map<String, dynamic> responses) {
+    int total = 0;
+    // Implementation depends on how responses are stored. 
+    // If stored as strings (Option Text), we need to map back to 0-4.
+    // However, AssessmentQuestions helper might need raw indices.
+    // For now, if we don't have raw scores easily, we might need a helper.
+    // BUT! In _saveToDatabase we saved 'responses' which might be the string map.
+    // AND 'responses_raw' was passed to _saveToDatabase but NOT to Assessment constructor?
+    // Wait, Assessment model 'responses' is Map<String, dynamic>.
+    
+    // Let's iterate and try to parse.
+    // Accessing standard options to reverse map
+    final options = AssessmentQuestions.standardOptions;
+    
+    responses.forEach((key, value) {
+      if (value is int) {
+        total += value;
+      } else if (value is String) {
+        final index = options.indexOf(value);
+        if (index >= 0) total += index;
+      }
+    });
+    return total;
+  }
+
+  Map<String, dynamic> _calculateDomainScores(Map<String, dynamic> responses) {
+     return AssessmentQuestions.calculateDomainScores(responses);
   }
 
   void _applyFilters() {

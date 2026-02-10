@@ -13,8 +13,10 @@ class SupabaseService {
       if (Supabase.instance.isInitialized) {
         return Supabase.instance.client;
       }
+      print('❌ SupabaseService: Supabase.instance is NOT initialized');
       return null;
     } catch (e) {
+      print('❌ SupabaseService: Error getting client: $e');
       return null;
     }
   }
@@ -193,7 +195,7 @@ class SupabaseService {
         .insert({
           'patient_id': assessment.patientId,
           'patient_name': assessment.patientName,
-          'patient_user_id': assessment.patientId,
+          // 'patient_user_id': assessment.patientId, // Removed: patientId is TEXT, patient_user_id requires UUID
           'assessment_date': assessment.assessmentDate.toIso8601String(),
           'assessor_name': assessment.assessorName,
           'assessor_role': assessment.assessorRole,
