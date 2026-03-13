@@ -95,37 +95,50 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   }
 
   Widget _buildSummaryCards() {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 1.5,
+    return Column(
       children: [
-        _buildStatCard(
-          'Total Assessments',
-          '${_dashboardStats!['totalAssessments']}',
-          Icons.assessment,
-          AppTheme.primaryColor,
+        Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                'Total',
+                '${_dashboardStats!['totalAssessments']}',
+                Icons.assessment,
+                AppTheme.primaryColor,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                'Today',
+                '${_dashboardStats!['todayAssessments']}',
+                Icons.today,
+                AppTheme.successGreen,
+              ),
+            ),
+          ],
         ),
-        _buildStatCard(
-          'Today',
-          '${_dashboardStats!['todayAssessments']}',
-          Icons.today,
-          AppTheme.successGreen,
-        ),
-        _buildStatCard(
-          'This Week',
-          '${_dashboardStats!['weekAssessments']}',
-          Icons.calendar_view_week,
-          AppTheme.infoBlue,
-        ),
-        _buildStatCard(
-          'This Month',
-          '${_dashboardStats!['monthAssessments']}',
-          Icons.calendar_month,
-          AppTheme.warningOrange,
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                'This Week',
+                '${_dashboardStats!['weekAssessments']}',
+                Icons.calendar_view_week,
+                AppTheme.infoBlue,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                'This Month',
+                '${_dashboardStats!['monthAssessments']}',
+                Icons.calendar_month,
+                AppTheme.warningOrange,
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -144,26 +157,42 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             colors: [color.withOpacity(0.8), color],
           ),
         ),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+        child: Row(
           children: [
-            Icon(icon, color: Colors.white, size: 28),
-            const Spacer(),
-            Text(
-              value,
-              style: GoogleFonts.poppins(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(10),
               ),
+              child: Icon(icon, color: Colors.white, size: 22),
             ),
-            Text(
-              title,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: Colors.white.withOpacity(0.9),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    value,
+                    style: GoogleFonts.poppins(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      height: 1.1,
+                    ),
+                  ),
+                  Text(
+                    title,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: Colors.white.withOpacity(0.9),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
             ),
           ],
@@ -178,10 +207,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       return const SizedBox.shrink();
     }
 
-    final spots = recentActivity.entries.map((entry) {
+    final entries = recentActivity.entries.toList();
+    final spots = entries.asMap().entries.map((entry) {
       return FlSpot(
-        entry.key.day.toDouble(),
-        entry.value.toDouble(),
+        entry.key.toDouble(),
+        entry.value.value.toDouble(),
       );
     }).toList();
 
@@ -224,9 +254,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         showTitles: true,
                         reservedSize: 30,
                         getTitlesWidget: (value, meta) {
-                          final date = recentActivity.keys.elementAt(value.toInt() % recentActivity.length);
+                          final idx = value.toInt();
+                          if (idx < 0 || idx >= entries.length) {
+                            return const Text('');
+                          }
                           return Text(
-                            DateFormat('E').format(date),
+                            DateFormat('E').format(entries[idx].key),
                             style: GoogleFonts.inter(fontSize: 10),
                           );
                         },
@@ -262,33 +295,44 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
+  Color _getCapacityColor(String key) {
+    final lower = key.toLowerCase();
+    if (lower.contains('has capacity')) return Colors.green;
+    if (lower.contains('lacks capacity') || lower.contains('needs 100%')) return Colors.red;
+    if (lower.contains('fluctuating')) return Colors.orange;
+    if (lower.contains('dsm-5')) return AppTheme.infoBlue;
+    if (lower.contains('mhca')) return AppTheme.warningOrange;
+    return Colors.grey;
+  }
+
   Widget _buildCapacityDistribution() {
     final capacityDist = _dashboardStats!['capacityDistribution'] as Map<String, int>;
     if (capacityDist.isEmpty) {
-      return const SizedBox.shrink();
+      return Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Text('Capacity Distribution',
+                  style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 20),
+              Text('No assessment data yet', style: GoogleFonts.inter(color: Colors.grey)),
+            ],
+          ),
+        ),
+      );
     }
 
     final total = capacityDist.values.fold(0, (sum, count) => sum + count);
     final pieSections = capacityDist.entries.map((entry) {
       final percentage = (entry.value / total * 100);
-      Color color;
-      switch (entry.key.toLowerCase()) {
-        case 'has capacity for this decision':
-          color = Colors.green;
-          break;
-        case 'lacks capacity for this decision':
-          color = Colors.red;
-          break;
-        case 'fluctuating capacity - reassessment needed':
-          color = Colors.orange;
-          break;
-        default:
-          color = Colors.grey;
-      }
+      final color = _getCapacityColor(entry.key);
 
       return PieChartSectionData(
         value: entry.value.toDouble(),
-        title: '${percentage.toStringAsFixed(1)}%',
+        title: '${percentage.toStringAsFixed(0)}%',
         color: color,
         radius: 80,
         titleStyle: GoogleFonts.inter(
@@ -315,74 +359,57 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            Row(
-              children: [
-                SizedBox(
-                  width: 200,
-                  height: 200,
-                  child: PieChart(
-                    PieChartData(
-                      sections: pieSections,
-                      sectionsSpace: 2,
-                      centerSpaceRadius: 40,
-                    ),
-                  ),
+            SizedBox(
+              height: 200,
+              child: PieChart(
+                PieChartData(
+                  sections: pieSections,
+                  sectionsSpace: 2,
+                  centerSpaceRadius: 40,
                 ),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: capacityDist.entries.map((entry) {
-                      Color color;
-                      switch (entry.key.toLowerCase()) {
-                        case 'has capacity for this decision':
-                          color = Colors.green;
-                          break;
-                        case 'lacks capacity for this decision':
-                          color = Colors.red;
-                          break;
-                        case 'fluctuating capacity - reassessment needed':
-                          color = Colors.orange;
-                          break;
-                        default:
-                          color = Colors.grey;
-                      }
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 16,
-                              height: 16,
-                              decoration: BoxDecoration(
-                                color: color,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                entry.key,
-                                style: GoogleFonts.inter(fontSize: 12),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            Text(
-                              '${entry.value}',
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ],
+              ),
             ),
+            const SizedBox(height: 16),
+            // Legend below the chart (responsive)
+            ...capacityDist.entries.map((entry) {
+              final color = _getCapacityColor(entry.key);
+              // Shorten long labels
+              String label = entry.key;
+              if (label.length > 40) {
+                label = '${label.substring(0, 37)}...';
+              }
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 14,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: GoogleFonts.inter(fontSize: 12),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Text(
+                      '${entry.value}',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
           ],
         ),
       ),

@@ -9,6 +9,7 @@ import '../services/assessment_questions.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
 import '../theme/app_theme.dart';
+import 'dsm5_level2_assessment_screen.dart';
 
 class DSM5AssessmentScreen extends StatefulWidget {
   const DSM5AssessmentScreen({super.key});
@@ -213,7 +214,7 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
     }
   }
 
-  void _showResultsDialog(int totalScore, String severity, 
+  void _showResultsDialog(int totalScore, String severity,
       Map<String, int> domainScores, List<String> flaggedDomains) {
     showDialog(
       context: context,
@@ -231,7 +232,7 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
               child: Icon(Icons.check_circle, color: AppTheme.successGreen),
             ),
             const SizedBox(width: 12),
-            const Text('Assessment Complete'),
+            const Expanded(child: Text('Level 1 Complete', overflow: TextOverflow.ellipsis)),
           ],
         ),
         content: SingleChildScrollView(
@@ -244,24 +245,76 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
               _buildResultRow('Severity', severity),
               const SizedBox(height: 16),
               if (flaggedDomains.isNotEmpty) ...[
-                Text(
-                  'Domains Requiring Follow-Up:',
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.warningOrange,
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.warningOrange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppTheme.warningOrange.withOpacity(0.3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.flag, size: 16, color: AppTheme.warningOrange),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Domains Requiring Level 2:',
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                                color: AppTheme.warningOrange,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      ...flaggedDomains.map((domain) => Padding(
+                        padding: const EdgeInsets.only(left: 8, bottom: 4),
+                        child: Row(
+                          children: [
+                            Icon(Icons.chevron_right, size: 14, color: AppTheme.warningOrange),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                domain,
+                                style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMedium),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 8),
-                ...flaggedDomains.map((domain) => Padding(
-                  padding: const EdgeInsets.only(left: 8, bottom: 4),
+                Text(
+                  'A Level 2 assessment is recommended for the flagged domains above.',
+                  style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textGrey),
+                ),
+              ] else ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.successGreen.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                   child: Row(
                     children: [
-                      Icon(Icons.flag, size: 16, color: AppTheme.warningOrange),
+                      Icon(Icons.check_circle_outline, size: 16, color: AppTheme.successGreen),
                       const SizedBox(width: 8),
-                      Expanded(child: Text(domain)),
+                      Expanded(
+                        child: Text(
+                          'No domains require Level 2 follow-up.',
+                          style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMedium),
+                        ),
+                      ),
                     ],
                   ),
-                )),
+                ),
               ],
             ],
           ),
@@ -274,16 +327,42 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
             },
             child: const Text('Done'),
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _resetAssessment();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
+          if (flaggedDomains.isNotEmpty)
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(context); // close dialog
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => DSM5Level2AssessmentScreen(
+                      patientId: _patientIdController.text.trim(),
+                      flaggedLevel1Domains: flaggedDomains,
+                    ),
+                  ),
+                ).then((done) {
+                  if (done == true && mounted) {
+                    Navigator.pop(context, true);
+                  }
+                });
+              },
+              icon: const Icon(Icons.arrow_forward, size: 16),
+              label: const Text('Level 2 →'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.warningOrange,
+                foregroundColor: Colors.white,
+              ),
+            )
+          else
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _resetAssessment();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+              ),
+              child: const Text('New Assessment'),
             ),
-            child: const Text('New Assessment'),
-          ),
         ],
       ),
     );

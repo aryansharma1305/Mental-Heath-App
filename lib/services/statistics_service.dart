@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/assessment.dart';
+import 'database_service.dart';
 import 'supabase_service.dart';
 
 class StatisticsService {
+  final DatabaseService _databaseService = DatabaseService();
   final SupabaseService _supabaseService = SupabaseService();
 
   /// Get DSM-5 assessments from SharedPreferences (local storage)
@@ -20,11 +22,35 @@ class StatisticsService {
     }
   }
 
+  /// Get MHCA assessments from SharedPreferences
+  Future<List<Map<String, dynamic>>> _getMhcaAssessments() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonList = prefs.getStringList('mhca_assessments') ?? [];
+    try {
+      return jsonList
+          .map((json) => jsonDecode(json) as Map<String, dynamic>)
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
   Future<Map<String, dynamic>> getDashboardStats() async {
-    // Get DSM-5 local assessments first
+    // 1. Get local SQLite assessments (primary source)
+    List<Assessment> localAssessments = [];
+    try {
+      localAssessments = await _databaseService.getAllAssessments();
+    } catch (e) {
+      // Ignore DB errors
+    }
+
+    // 2. Get DSM-5 local assessments from SharedPreferences
     final dsm5Assessments = await _getDsm5Assessments();
-    
-    // Also get Supabase assessments if available
+
+    // 3. Get MHCA assessments from SharedPreferences
+    final mhcaAssessments = await _getMhcaAssessments();
+
+    // 4. Get Supabase assessments if available
     List<Assessment> supabaseAssessments = [];
     if (SupabaseService.isAvailable) {
       try {
@@ -38,17 +64,35 @@ class StatisticsService {
     final today = DateTime(now.year, now.month, now.day);
     final thisWeek = today.subtract(Duration(days: today.weekday - 1));
     final thisMonth = DateTime(now.year, now.month, 1);
-    
-    // Count DSM-5 assessments
-    int totalDsm5 = dsm5Assessments.length;
+
+    // ---- Count local SQLite assessments ----
+    int todayLocal = 0;
+    int weekLocal = 0;
+    int monthLocal = 0;
+    final localByDate = <DateTime, int>{};
+    final capacityStats = <String, int>{};
+
+    for (final a in localAssessments) {
+      final dateOnly = DateTime(a.assessmentDate.year, a.assessmentDate.month, a.assessmentDate.day);
+      if (dateOnly.isAtSameMomentAs(today)) todayLocal++;
+      if (a.assessmentDate.isAfter(thisWeek) || a.assessmentDate.isAtSameMomentAs(thisWeek)) weekLocal++;
+      if (a.assessmentDate.isAfter(thisMonth) || a.assessmentDate.isAtSameMomentAs(thisMonth)) monthLocal++;
+      localByDate[dateOnly] = (localByDate[dateOnly] ?? 0) + 1;
+
+      // Capacity distribution
+      final capacity = a.overallCapacity;
+      if (capacity.isNotEmpty) {
+        capacityStats[capacity] = (capacityStats[capacity] ?? 0) + 1;
+      }
+    }
+
+    // ---- Count DSM-5 assessments ----
     int todayDsm5 = 0;
     int weekDsm5 = 0;
     int monthDsm5 = 0;
-    final dsm5ByDate = <DateTime, int>{};
-    final dsm5Severity = <String, int>{};
     
     for (final assessment in dsm5Assessments) {
-      final dateStr = assessment['assessment_date'] ?? '';
+      final dateStr = assessment['assessment_date'] ?? assessment['created_at'] ?? '';
       final assessmentDate = DateTime.tryParse(dateStr) ?? now;
       final dateOnly = DateTime(assessmentDate.year, assessmentDate.month, assessmentDate.day);
       
@@ -56,59 +100,85 @@ class StatisticsService {
       if (assessmentDate.isAfter(thisWeek) || assessmentDate.isAtSameMomentAs(thisWeek)) weekDsm5++;
       if (assessmentDate.isAfter(thisMonth) || assessmentDate.isAtSameMomentAs(thisMonth)) monthDsm5++;
       
-      dsm5ByDate[dateOnly] = (dsm5ByDate[dateOnly] ?? 0) + 1;
+      localByDate[dateOnly] = (localByDate[dateOnly] ?? 0) + 1;
       
       final severity = (assessment['severity'] ?? 'Unknown') as String;
-      dsm5Severity[severity] = (dsm5Severity[severity] ?? 0) + 1;
+      capacityStats['DSM-5: $severity'] = (capacityStats['DSM-5: $severity'] ?? 0) + 1;
     }
-    
-    // Count Supabase assessments
-    int totalSupabase = supabaseAssessments.length;
+
+    // ---- Count MHCA SharedPreferences assessments ----
+    int todayMhca = 0;
+    int weekMhca = 0;
+    int monthMhca = 0;
+
+    for (final assessment in mhcaAssessments) {
+      final dateStr = assessment['created_at'] ?? assessment['assessment_date'] ?? '';
+      final assessmentDate = DateTime.tryParse(dateStr) ?? now;
+      final dateOnly = DateTime(assessmentDate.year, assessmentDate.month, assessmentDate.day);
+      
+      if (dateOnly.isAtSameMomentAs(today)) todayMhca++;
+      if (assessmentDate.isAfter(thisWeek) || assessmentDate.isAtSameMomentAs(thisWeek)) weekMhca++;
+      if (assessmentDate.isAfter(thisMonth) || assessmentDate.isAtSameMomentAs(thisMonth)) monthMhca++;
+      
+      localByDate[dateOnly] = (localByDate[dateOnly] ?? 0) + 1;
+
+      final determination = (assessment['determination'] ?? 'Unknown') as String;
+      if (determination.isNotEmpty) {
+        capacityStats['MHCA: $determination'] = (capacityStats['MHCA: $determination'] ?? 0) + 1;
+      }
+    }
+
+    // ---- Count Supabase assessments (avoid double-counting) ----
+    // We only add Supabase assessments that are NOT already in localAssessments
     int todaySupabase = 0;
     int weekSupabase = 0;
     int monthSupabase = 0;
+    final localIds = localAssessments.map((a) => a.patientId).toSet();
     
     for (final a in supabaseAssessments) {
+      // Skip if already counted in local
+      if (localIds.contains(a.patientId)) continue;
+
       final dateOnly = DateTime(a.assessmentDate.year, a.assessmentDate.month, a.assessmentDate.day);
       if (dateOnly.isAtSameMomentAs(today)) todaySupabase++;
       if (a.assessmentDate.isAfter(thisWeek) || a.assessmentDate.isAtSameMomentAs(thisWeek)) weekSupabase++;
       if (a.assessmentDate.isAfter(thisMonth) || a.assessmentDate.isAtSameMomentAs(thisMonth)) monthSupabase++;
+      localByDate[dateOnly] = (localByDate[dateOnly] ?? 0) + 1;
+      capacityStats[a.overallCapacity] = (capacityStats[a.overallCapacity] ?? 0) + 1;
     }
     
-    // Combine counts
-    final totalAssessments = totalDsm5 + totalSupabase;
-    final todayAssessments = todayDsm5 + todaySupabase;
-    final weekAssessments = weekDsm5 + weekSupabase;
-    final monthAssessments = monthDsm5 + monthSupabase;
+    // ---- Combine counts ----
+    final totalAssessments = localAssessments.length + dsm5Assessments.length + mhcaAssessments.length + 
+        supabaseAssessments.where((a) => !localIds.contains(a.patientId)).length;
+    final todayAssessments = todayLocal + todayDsm5 + todayMhca + todaySupabase;
+    final weekAssessments = weekLocal + weekDsm5 + weekMhca + weekSupabase;
+    final monthAssessments = monthLocal + monthDsm5 + monthMhca + monthSupabase;
     
-    // Capacity distribution (combine DSM-5 severity with Supabase capacity)
-    final capacityStats = <String, int>{};
-    for (final entry in dsm5Severity.entries) {
-      capacityStats['DSM-5: ${entry.key}'] = entry.value;
-    }
-    for (final assessment in supabaseAssessments) {
-      capacityStats[assessment.overallCapacity] = (capacityStats[assessment.overallCapacity] ?? 0) + 1;
-    }
-    
-    // Recent activity (last 7 days) - combine both sources
+    // Recent activity (last 7 days)
     final recentActivity = <DateTime, int>{};
     for (int i = 6; i >= 0; i--) {
       final date = today.subtract(Duration(days: i));
-      int count = dsm5ByDate[date] ?? 0;
-      
-      // Add Supabase counts for this date
-      count += supabaseAssessments.where((a) {
-        final assessmentDate = DateTime(a.assessmentDate.year, a.assessmentDate.month, a.assessmentDate.day);
-        return assessmentDate.isAtSameMomentAs(date);
-      }).length;
-      
-      recentActivity[date] = count;
+      recentActivity[date] = localByDate[date] ?? 0;
     }
     
-    // Top assessors (from Supabase only, DSM-5 doesn't track assessor)
+    // Top assessors (from local DB + Supabase)
     final assessorStats = <String, int>{};
-    for (final assessment in supabaseAssessments) {
-      assessorStats[assessment.assessorName] = (assessorStats[assessment.assessorName] ?? 0) + 1;
+    for (final a in localAssessments) {
+      if (a.assessorName.isNotEmpty) {
+        assessorStats[a.assessorName] = (assessorStats[a.assessorName] ?? 0) + 1;
+      }
+    }
+    for (final a in supabaseAssessments) {
+      if (!localIds.contains(a.patientId)) {
+        assessorStats[a.assessorName] = (assessorStats[a.assessorName] ?? 0) + 1;
+      }
+    }
+    // Add MHCA assessors
+    for (final a in mhcaAssessments) {
+      final name = (a['assessor_name'] ?? a['doctor_name'] ?? '') as String;
+      if (name.isNotEmpty) {
+        assessorStats[name] = (assessorStats[name] ?? 0) + 1;
+      }
     }
     
     final topAssessors = assessorStats.entries.toList()
@@ -127,12 +197,34 @@ class StatisticsService {
   }
 
   Future<List<Map<String, dynamic>>> getMonthlyTrends() async {
-    if (!SupabaseService.isAvailable) return [];
-    
-    final assessments = await _supabaseService.getAllAssessments();
+    // Use local SQLite data as primary source (works offline)
+    List<Assessment> allAssessments = [];
+    try {
+      allAssessments = await _databaseService.getAllAssessments();
+    } catch (e) {
+      // Ignore
+    }
+
+    // Also add Supabase if available
+    if (SupabaseService.isAvailable) {
+      try {
+        final supabaseAssessments = await _supabaseService.getAllAssessments();
+        final localIds = allAssessments.map((a) => a.patientId).toSet();
+        allAssessments.addAll(
+          supabaseAssessments.where((a) => !localIds.contains(a.patientId))
+        );
+      } catch (e) {
+        // Ignore
+      }
+    }
+
+    // Also include MHCA assessments from SharedPreferences
+    final mhcaAssessments = await _getMhcaAssessments();
+
     final monthlyData = <String, Map<String, int>>{};
-    
-    for (final assessment in assessments) {
+
+    // Process local DB assessments
+    for (final assessment in allAssessments) {
       final monthKey = '${assessment.assessmentDate.year}-${assessment.assessmentDate.month.toString().padLeft(2, '0')}';
       
       if (!monthlyData.containsKey(monthKey)) {
@@ -140,28 +232,52 @@ class StatisticsService {
           'total': 0,
           'hasCapacity': 0,
           'lacksCapacity': 0,
-          'fluctuating': 0,
-          'undetermined': 0,
+          'other': 0,
         };
       }
       
       monthlyData[monthKey]!['total'] = monthlyData[monthKey]!['total']! + 1;
       
-      switch (assessment.overallCapacity.toLowerCase()) {
-        case 'has capacity for this decision':
-          monthlyData[monthKey]!['hasCapacity'] = monthlyData[monthKey]!['hasCapacity']! + 1;
-          break;
-        case 'lacks capacity for this decision':
-          monthlyData[monthKey]!['lacksCapacity'] = monthlyData[monthKey]!['lacksCapacity']! + 1;
-          break;
-        case 'fluctuating capacity - reassessment needed':
-          monthlyData[monthKey]!['fluctuating'] = monthlyData[monthKey]!['fluctuating']! + 1;
-          break;
-        default:
-          monthlyData[monthKey]!['undetermined'] = monthlyData[monthKey]!['undetermined']! + 1;
+      final capacity = assessment.overallCapacity.toLowerCase();
+      if (capacity.contains('has capacity')) {
+        monthlyData[monthKey]!['hasCapacity'] = monthlyData[monthKey]!['hasCapacity']! + 1;
+      } else if (capacity.contains('lacks capacity') || capacity.contains('needs 100%')) {
+        monthlyData[monthKey]!['lacksCapacity'] = monthlyData[monthKey]!['lacksCapacity']! + 1;
+      } else {
+        monthlyData[monthKey]!['other'] = monthlyData[monthKey]!['other']! + 1;
+      }
+    }
+
+    // Process MHCA SharedPreferences assessments
+    for (final assessment in mhcaAssessments) {
+      final dateStr = assessment['created_at'] ?? assessment['assessment_date'] ?? '';
+      final date = DateTime.tryParse(dateStr) ?? DateTime.now();
+      final monthKey = '${date.year}-${date.month.toString().padLeft(2, '0')}';
+
+      if (!monthlyData.containsKey(monthKey)) {
+        monthlyData[monthKey] = {
+          'total': 0,
+          'hasCapacity': 0,
+          'lacksCapacity': 0,
+          'other': 0,
+        };
+      }
+
+      monthlyData[monthKey]!['total'] = monthlyData[monthKey]!['total']! + 1;
+
+      final determination = (assessment['determination'] ?? '').toString().toLowerCase();
+      if (determination.contains('has capacity')) {
+        monthlyData[monthKey]!['hasCapacity'] = monthlyData[monthKey]!['hasCapacity']! + 1;
+      } else if (determination.contains('needs 100%')) {
+        monthlyData[monthKey]!['lacksCapacity'] = monthlyData[monthKey]!['lacksCapacity']! + 1;
+      } else {
+        monthlyData[monthKey]!['other'] = monthlyData[monthKey]!['other']! + 1;
       }
     }
     
+    // If no data yet, return empty
+    if (monthlyData.isEmpty) return [];
+
     final result = monthlyData.entries.map((entry) => {
       'month': entry.key,
       ...entry.value,
@@ -171,17 +287,27 @@ class StatisticsService {
   }
 
   Future<Map<String, dynamic>> getAssessorPerformance(String assessorName) async {
-    if (!SupabaseService.isAvailable) {
-      return {
-        'totalAssessments': 0,
-        'averagePerWeek': 0.0,
-        'capacityDistribution': <String, int>{},
-        'recentAssessments': <Assessment>[],
-      };
+    // Use local DB as primary source
+    List<Assessment> allAssessments = [];
+    try {
+      allAssessments = await _databaseService.getAllAssessments();
+    } catch (e) {
+      // Ignore
+    }
+
+    if (SupabaseService.isAvailable) {
+      try {
+        final supabaseAssessments = await _supabaseService.getAllAssessments();
+        final localIds = allAssessments.map((a) => a.patientId).toSet();
+        allAssessments.addAll(
+          supabaseAssessments.where((a) => !localIds.contains(a.patientId))
+        );
+      } catch (e) {
+        // Ignore
+      }
     }
     
-    final assessments = await _supabaseService.getAllAssessments();
-    final userAssessments = assessments.where((a) => a.assessorName == assessorName).toList();
+    final userAssessments = allAssessments.where((a) => a.assessorName == assessorName).toList();
     
     if (userAssessments.isEmpty) {
       return {

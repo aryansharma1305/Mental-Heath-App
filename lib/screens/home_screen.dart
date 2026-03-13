@@ -21,6 +21,8 @@ import 'help_support_screen.dart';
 import 'doctor_dashboard_screen.dart';
 import 'dsm5_assessment_screen.dart';
 import 'dsm5_responses_screen.dart';
+import 'mhca_assessment_screen.dart';
+import 'mhca_responses_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -81,7 +83,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     try {
       final assessments = await _databaseService.getAllAssessments();
       setState(() {
-        _recentAssessments = assessments.take(3).toList();
+        _recentAssessments = assessments.take(10).toList();
         _isLoading = false;
       });
     } catch (e) {
@@ -396,7 +398,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         mainAxisSpacing: 16,
         childAspectRatio: 1.0,
       ),
-      itemCount: actions.length > 4 ? 4 : actions.length,
+      itemCount: actions.length > 6 ? 6 : actions.length,
       itemBuilder: (context, index) {
         final action = actions[index];
         final gradients = [
@@ -443,6 +445,32 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               context,
               MaterialPageRoute(
                 builder: (context) => const DSM5ResponsesScreen(),
+              ),
+            );
+          },
+        },
+        {
+          'icon': Icons.medical_information_outlined,
+          'title': 'MHCA Assessment',
+          'subtitle': 'Treatment capacity',
+          'onTap': () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const MHCAAssessmentScreen(),
+              ),
+            );
+          },
+        },
+        {
+          'icon': Icons.folder_outlined,
+          'title': 'MHCA Records',
+          'subtitle': 'Past MHCA forms',
+          'onTap': () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const MHCAResponsesScreen(),
               ),
             );
           },
@@ -503,6 +531,32 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           },
         },
         {
+          'icon': Icons.medical_information_outlined,
+          'title': 'MHCA Assessment',
+          'subtitle': 'Treatment capacity',
+          'onTap': () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const MHCAAssessmentScreen(),
+              ),
+            );
+          },
+        },
+        {
+          'icon': Icons.folder_outlined,
+          'title': 'MHCA Records',
+          'subtitle': 'Past MHCA forms',
+          'onTap': () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const MHCAResponsesScreen(),
+              ),
+            );
+          },
+        },
+        {
           'icon': Icons.analytics_outlined,
           'title': 'Analytics',
           'subtitle': 'View statistics',
@@ -554,6 +608,32 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               context,
               MaterialPageRoute(
                 builder: (context) => const AdminPanelScreen(),
+              ),
+            );
+          },
+        },
+        {
+          'icon': Icons.medical_information_outlined,
+          'title': 'MHCA Assessment',
+          'subtitle': 'Treatment capacity',
+          'onTap': () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const MHCAAssessmentScreen(),
+              ),
+            );
+          },
+        },
+        {
+          'icon': Icons.folder_outlined,
+          'title': 'MHCA Records',
+          'subtitle': 'Past MHCA forms',
+          'onTap': () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const MHCAResponsesScreen(),
               ),
             );
           },
