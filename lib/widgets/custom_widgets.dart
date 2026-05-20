@@ -9,11 +9,7 @@ class CustomLoadingWidget extends StatelessWidget {
   final String? message;
   final double size;
 
-  const CustomLoadingWidget({
-    super.key,
-    this.message,
-    this.size = 50,
-  });
+  const CustomLoadingWidget({super.key, this.message, this.size = 50});
 
   @override
   Widget build(BuildContext context) {
@@ -21,31 +17,30 @@ class CustomLoadingWidget extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            gradient: AppTheme.primaryGradient,
-            borderRadius: BorderRadius.circular(size / 2),
-          ),
-          child: const Icon(
-            Icons.psychology,
-            color: Colors.white,
-            size: 30,
-          ),
-        ).animate(onPlay: (controller) => controller.repeat())
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                gradient: AppTheme.primaryGradient,
+                borderRadius: BorderRadius.circular(size / 2),
+              ),
+              child: const Icon(
+                Icons.psychology,
+                color: Colors.white,
+                size: 30,
+              ),
+            )
+            .animate(onPlay: (controller) => controller.repeat())
             .rotate(duration: 2000.ms)
             .then()
             .scale(begin: const Offset(1, 1), end: const Offset(1.1, 1.1))
             .then()
             .scale(begin: const Offset(1.1, 1.1), end: const Offset(1, 1)),
-        
+
         if (message != null) ...[
           const SizedBox(height: 16),
           Text(
             message!,
-            style: AppTheme.bodyMedium.copyWith(
-              color: AppTheme.textGrey,
-            ),
+            style: AppTheme.bodyMedium.copyWith(color: AppTheme.textGrey),
             textAlign: TextAlign.center,
           ),
         ],
@@ -209,10 +204,7 @@ class CustomInputField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: AppTheme.labelLarge,
-        ),
+        Text(label, style: AppTheme.labelLarge),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
@@ -226,10 +218,7 @@ class CustomInputField extends StatelessWidget {
             hintText: hint,
             prefixIcon: prefixIcon != null ? Icon(prefixIcon) : null,
             suffixIcon: suffixIcon != null
-                ? IconButton(
-                    icon: Icon(suffixIcon),
-                    onPressed: onSuffixTap,
-                  )
+                ? IconButton(icon: Icon(suffixIcon), onPressed: onSuffixTap)
                 : null,
           ),
         ),
@@ -263,11 +252,7 @@ class StatusChip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(
-              icon,
-              size: 14,
-              color: Colors.white,
-            ),
+            Icon(icon, size: 14, color: Colors.white),
             const SizedBox(width: 4),
           ],
           Text(
@@ -289,11 +274,7 @@ class ShimmerCard extends StatelessWidget {
   final double height;
   final double? width;
 
-  const ShimmerCard({
-    super.key,
-    this.height = 100,
-    this.width,
-  });
+  const ShimmerCard({super.key, this.height = 100, this.width});
 
   @override
   Widget build(BuildContext context) {
@@ -342,34 +323,28 @@ class EmptyStateWidget extends StatelessWidget {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: AppTheme.primaryBlue.withOpacity(0.1),
+                color: AppTheme.primaryBlue.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(40),
               ),
-              child: Icon(
-                icon,
-                size: 40,
-                color: AppTheme.primaryBlue,
-              ),
+              child: Icon(icon, size: 40, color: AppTheme.primaryBlue),
             ).animate().scale(delay: 200.ms),
-            
+
             const SizedBox(height: 24),
-            
+
             Text(
               title,
               style: AppTheme.headingSmall,
               textAlign: TextAlign.center,
             ).animate().fadeIn(delay: 400.ms),
-            
+
             const SizedBox(height: 8),
-            
+
             Text(
               subtitle,
-              style: AppTheme.bodyMedium.copyWith(
-                color: AppTheme.textGrey,
-              ),
+              style: AppTheme.bodyMedium.copyWith(color: AppTheme.textGrey),
               textAlign: TextAlign.center,
             ).animate().fadeIn(delay: 600.ms),
-            
+
             if (buttonText != null && onButtonPressed != null) ...[
               const SizedBox(height: 24),
               CustomButton(
@@ -407,14 +382,8 @@ class CustomProgressIndicator extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                label!,
-                style: AppTheme.bodyMedium,
-              ),
-              Text(
-                '${(progress * 100).toInt()}%',
-                style: AppTheme.bodySmall,
-              ),
+              Text(label!, style: AppTheme.bodyMedium),
+              Text('${(progress * 100).toInt()}%', style: AppTheme.bodySmall),
             ],
           ),
           const SizedBox(height: 8),
@@ -433,7 +402,7 @@ class CustomProgressIndicator extends StatelessWidget {
                 gradient: LinearGradient(
                   colors: [
                     color ?? AppTheme.primaryBlue,
-                    (color ?? AppTheme.primaryBlue).withOpacity(0.7),
+                    (color ?? AppTheme.primaryBlue).withValues(alpha: 0.7),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(4),

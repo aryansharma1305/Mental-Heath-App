@@ -44,9 +44,9 @@ class LanguageService extends ChangeNotifier {
 
   /// Get translated string
   String translate(String key) {
-    return _translations[_currentLanguage.code]?[key] ?? 
-           _translations['en']?[key] ?? 
-           key;
+    return _translations[_currentLanguage.code]?[key] ??
+        _translations['en']?[key] ??
+        key;
   }
 
   /// Translation map
@@ -91,21 +91,25 @@ class LanguageService extends ChangeNotifier {
       'fluctuating': 'Fluctuating capacity - reassessment needed',
 
       // Questions
-      'q1': 'Does the person understand the information relevant to the decision?',
+      'q1':
+          'Does the person understand the information relevant to the decision?',
       'q1_o1': 'Fully understands all relevant information',
       'q1_o2': 'Understands most of the relevant information',
       'q1_o3': 'Partial understanding with some gaps',
       'q1_o4': 'Limited understanding of relevant information',
       'q1_o5': 'Cannot understand the relevant information',
 
-      'q2': 'Can the person retain the information long enough to make the decision?',
-      'q2_o1': 'Retains information fully throughout the decision-making process',
+      'q2':
+          'Can the person retain the information long enough to make the decision?',
+      'q2_o1':
+          'Retains information fully throughout the decision-making process',
       'q2_o2': 'Retains most information with minor lapses',
       'q2_o3': 'Retains information for a limited time',
       'q2_o4': 'Has difficulty retaining information',
       'q2_o5': 'Cannot retain the information at all',
 
-      'q3': 'Can the person use or weigh the information as part of the decision-making process?',
+      'q3':
+          'Can the person use or weigh the information as part of the decision-making process?',
       'q3_o1': 'Can fully use and weigh all relevant information',
       'q3_o2': 'Can use and weigh most information effectively',
       'q3_o3': 'Shows some ability to use and weigh information',
@@ -119,21 +123,24 @@ class LanguageService extends ChangeNotifier {
       'q4_o4': 'Has difficulty communicating decision clearly',
       'q4_o5': 'Cannot communicate their decision by any means',
 
-      'q5': 'Does the person appreciate the consequences of making or not making the decision?',
+      'q5':
+          'Does the person appreciate the consequences of making or not making the decision?',
       'q5_o1': 'Fully appreciates all potential consequences',
       'q5_o2': 'Appreciates most consequences',
       'q5_o3': 'Partial appreciation of consequences',
       'q5_o4': 'Limited appreciation of consequences',
       'q5_o5': 'Does not appreciate the consequences',
 
-      'q6': 'Is the person\'s decision consistent with their known values and beliefs?',
+      'q6':
+          'Is the person\'s decision consistent with their known values and beliefs?',
       'q6_o1': 'Decision is fully consistent with known values/beliefs',
       'q6_o2': 'Decision is mostly consistent',
       'q6_o3': 'Some inconsistency with known values/beliefs',
       'q6_o4': 'Decision appears inconsistent with values/beliefs',
       'q6_o5': 'Unable to determine or clearly inconsistent',
 
-      'q7': 'Is there an impairment or disturbance in the functioning of the mind or brain?',
+      'q7':
+          'Is there an impairment or disturbance in the functioning of the mind or brain?',
       'q7_o1': 'No impairment or disturbance identified',
       'q7_o2': 'Minor impairment that does not affect decision-making',
       'q7_o3': 'Moderate impairment that may affect decision-making',
@@ -147,7 +154,8 @@ class LanguageService extends ChangeNotifier {
       'q8_o4': 'Suboptimal time - assessment may need to be repeated',
       'q8_o5': 'Not appropriate time - defer assessment',
 
-      'q9': 'Has all practicable support been provided to help the person make the decision?',
+      'q9':
+          'Has all practicable support been provided to help the person make the decision?',
       'q9_o1': 'All practicable support has been provided',
       'q9_o2': 'Most support options have been explored',
       'q9_o3': 'Some support has been provided',
@@ -161,7 +169,8 @@ class LanguageService extends ChangeNotifier {
       'q10_o4': 'Limited understanding of risks',
       'q10_o5': 'Does not understand the risks',
 
-      'q11': 'Has the person been presented with and understood alternative options?',
+      'q11':
+          'Has the person been presented with and understood alternative options?',
       'q11_o1': 'All alternatives presented and understood',
       'q11_o2': 'Most alternatives presented and understood',
       'q11_o3': 'Some alternatives presented with partial understanding',
@@ -175,7 +184,8 @@ class LanguageService extends ChangeNotifier {
       'q12_o4': 'Capacity is declining',
       'q12_o5': 'Cannot determine fluctuation pattern',
 
-      'q13': 'Based on the assessment, what is the overall capacity determination?',
+      'q13':
+          'Based on the assessment, what is the overall capacity determination?',
       'q13_o1': 'Has capacity for this decision',
       'q13_o2': 'Lacks capacity for this decision',
       'q13_o3': 'Fluctuating capacity - reassessment needed',
@@ -245,22 +255,26 @@ class LanguageService extends ChangeNotifier {
       'q1_o4': 'प्रासंगिक जानकारी की सीमित समझ',
       'q1_o5': 'प्रासंगिक जानकारी को समझने में असमर्थ',
 
-      'q2': 'क्या व्यक्ति निर्णय लेने के लिए पर्याप्त समय तक जानकारी याद रख सकता है?',
+      'q2':
+          'क्या व्यक्ति निर्णय लेने के लिए पर्याप्त समय तक जानकारी याद रख सकता है?',
       'q2_o1': 'निर्णय लेने की प्रक्रिया में पूरी तरह से जानकारी याद रखता है',
       'q2_o2': 'मामूली चूक के साथ अधिकांश जानकारी याद रखता है',
       'q2_o3': 'सीमित समय के लिए जानकारी याद रखता है',
       'q2_o4': 'जानकारी याद रखने में कठिनाई होती है',
       'q2_o5': 'जानकारी बिल्कुल याद नहीं रख सकता',
 
-      'q3': 'क्या व्यक्ति निर्णय लेने की प्रक्रिया में जानकारी का उपयोग या विचार कर सकता है?',
+      'q3':
+          'क्या व्यक्ति निर्णय लेने की प्रक्रिया में जानकारी का उपयोग या विचार कर सकता है?',
       'q3_o1': 'सभी प्रासंगिक जानकारी का पूर्ण उपयोग और विचार कर सकता है',
       'q3_o2': 'अधिकांश जानकारी का प्रभावी ढंग से उपयोग और विचार कर सकता है',
       'q3_o3': 'जानकारी के उपयोग और विचार की कुछ क्षमता दिखाता है',
       'q3_o4': 'जानकारी के उपयोग या विचार की सीमित क्षमता',
       'q3_o5': 'जानकारी का उपयोग या विचार नहीं कर सकता',
 
-      'q4': 'क्या व्यक्ति अपना निर्णय (किसी भी माध्यम से) संप्रेषित कर सकता है?',
-      'q4_o1': 'बोलकर/लिखकर/अन्य माध्यमों से स्पष्ट रूप से निर्णय संप्रेषित कर सकता है',
+      'q4':
+          'क्या व्यक्ति अपना निर्णय (किसी भी माध्यम से) संप्रेषित कर सकता है?',
+      'q4_o1':
+          'बोलकर/लिखकर/अन्य माध्यमों से स्पष्ट रूप से निर्णय संप्रेषित कर सकता है',
       'q4_o2': 'कुछ सहायता से निर्णय संप्रेषित कर सकता है',
       'q4_o3': 'महत्वपूर्ण सहायता से निर्णय संप्रेषित कर सकता है',
       'q4_o4': 'निर्णय को स्पष्ट रूप से संप्रेषित करने में कठिनाई',
@@ -273,7 +287,8 @@ class LanguageService extends ChangeNotifier {
       'q5_o4': 'परिणामों की सीमित सराहना',
       'q5_o5': 'परिणामों की सराहना नहीं करता',
 
-      'q6': 'क्या व्यक्ति का निर्णय उनके ज्ञात मूल्यों और विश्वासों के अनुरूप है?',
+      'q6':
+          'क्या व्यक्ति का निर्णय उनके ज्ञात मूल्यों और विश्वासों के अनुरूप है?',
       'q6_o1': 'निर्णय ज्ञात मूल्यों/विश्वासों के साथ पूरी तरह अनुरूप है',
       'q6_o2': 'निर्णय अधिकतर अनुरूप है',
       'q6_o3': 'ज्ञात मूल्यों/विश्वासों के साथ कुछ असंगति',
@@ -294,7 +309,8 @@ class LanguageService extends ChangeNotifier {
       'q8_o4': 'उपयुक्त समय नहीं - मूल्यांकन को दोहराने की आवश्यकता हो सकती है',
       'q8_o5': 'उचित समय नहीं - मूल्यांकन स्थगित करें',
 
-      'q9': 'क्या व्यक्ति को निर्णय लेने में मदद करने के लिए सभी व्यावहारिक सहायता प्रदान की गई है?',
+      'q9':
+          'क्या व्यक्ति को निर्णय लेने में मदद करने के लिए सभी व्यावहारिक सहायता प्रदान की गई है?',
       'q9_o1': 'सभी व्यावहारिक सहायता प्रदान की गई है',
       'q9_o2': 'अधिकांश सहायता विकल्पों का पता लगाया गया है',
       'q9_o3': 'कुछ सहायता प्रदान की गई है',
@@ -308,17 +324,20 @@ class LanguageService extends ChangeNotifier {
       'q10_o4': 'जोखिमों की सीमित समझ',
       'q10_o5': 'जोखिमों को नहीं समझता',
 
-      'q11': 'क्या व्यक्ति को वैकल्पिक विकल्प प्रस्तुत किए गए हैं और उन्हें समझाया गया है?',
+      'q11':
+          'क्या व्यक्ति को वैकल्पिक विकल्प प्रस्तुत किए गए हैं और उन्हें समझाया गया है?',
       'q11_o1': 'सभी विकल्प प्रस्तुत और समझाए गए',
       'q11_o2': 'अधिकांश विकल्प प्रस्तुत और समझाए गए',
       'q11_o3': 'आंशिक समझ के साथ कुछ विकल्प प्रस्तुत किए गए',
       'q11_o4': 'सीमित विकल्पों पर चर्चा की गई',
       'q11_o5': 'कोई विकल्प प्रस्तुत नहीं किया गया या समझ में नहीं आया',
 
-      'q12': 'क्या व्यक्ति की क्षमता में उतार-चढ़ाव होने या सुधार होने की संभावना है?',
+      'q12':
+          'क्या व्यक्ति की क्षमता में उतार-चढ़ाव होने या सुधार होने की संभावना है?',
       'q12_o1': 'क्षमता स्थिर है और बदलने की संभावना नहीं है',
       'q12_o2': 'समय/उपचार के साथ क्षमता में सुधार हो सकता है',
-      'q12_o3': 'क्षमता में उतार-चढ़ाव होता है - पुनर्मूल्यांकन की आवश्यकता हो सकती है',
+      'q12_o3':
+          'क्षमता में उतार-चढ़ाव होता है - पुनर्मूल्यांकन की आवश्यकता हो सकती है',
       'q12_o4': 'क्षमता में गिरावट हो रही है',
       'q12_o5': 'उतार-चढ़ाव पैटर्न निर्धारित नहीं कर सकते',
 
@@ -393,15 +412,19 @@ class LanguageService extends ChangeNotifier {
       'q1_o5': 'தொடர்புடைய தகவல்களைப் புரிந்துகொள்ள இயலாது',
 
       'q2': 'முடிவெடுக்க போதுமான நேரம் தகவலை நினைவில் வைத்திருக்க முடியுமா?',
-      'q2_o1': 'முடிவெடுக்கும் செயல்முறை முழுவதும் தகவலை முழுமையாக நினைவில் வைத்திருக்கிறார்',
+      'q2_o1':
+          'முடிவெடுக்கும் செயல்முறை முழுவதும் தகவலை முழுமையாக நினைவில் வைத்திருக்கிறார்',
       'q2_o2': 'சிறு தவறுகளுடன் பெரும்பாலான தகவலை நினைவில் வைத்திருக்கிறார்',
       'q2_o3': 'குறைந்த நேரத்திற்கு தகவலை நினைவில் வைத்திருக்கிறார்',
       'q2_o4': 'தகவலை நினைவில் வைத்திருப்பதில் சிரமம்',
       'q2_o5': 'தகவலை நினைவில் வைத்திருக்க இயலாது',
 
-      'q3': 'முடிவெடுக்கும் செயல்முறையின் பகுதியாக தகவலைப் பயன்படுத்த அல்லது எடைபோட முடியுமா?',
-      'q3_o1': 'அனைத்து தொடர்புடைய தகவல்களையும் முழுமையாக பயன்படுத்தவும் எடைபோடவும் முடியும்',
-      'q3_o2': 'பெரும்பாலான தகவல்களை திறம்பட பயன்படுத்தவும் எடைபோடவும் முடியும்',
+      'q3':
+          'முடிவெடுக்கும் செயல்முறையின் பகுதியாக தகவலைப் பயன்படுத்த அல்லது எடைபோட முடியுமா?',
+      'q3_o1':
+          'அனைத்து தொடர்புடைய தகவல்களையும் முழுமையாக பயன்படுத்தவும் எடைபோடவும் முடியும்',
+      'q3_o2':
+          'பெரும்பாலான தகவல்களை திறம்பட பயன்படுத்தவும் எடைபோடவும் முடியும்',
       'q3_o3': 'தகவலைப் பயன்படுத்தவும் எடைபோடவும் சில திறன் காட்டுகிறார்',
       'q3_o4': 'தகவலைப் பயன்படுத்த அல்லது எடைபோட குறைந்த திறன்',
       'q3_o5': 'தகவலைப் பயன்படுத்த அல்லது எடைபோட இயலாது',
@@ -420,8 +443,10 @@ class LanguageService extends ChangeNotifier {
       'q5_o4': 'விளைவுகளின் குறைந்த உணர்வு',
       'q5_o5': 'விளைவுகளை உணரவில்லை',
 
-      'q6': 'நபரின் முடிவு அவர்களின் அறியப்பட்ட மதிப்புகள் மற்றும் நம்பிக்கைகளுடன் ஒத்துப்போகிறதா?',
-      'q6_o1': 'முடிவு அறியப்பட்ட மதிப்புகள்/நம்பிக்கைகளுடன் முழுமையாக ஒத்துப்போகிறது',
+      'q6':
+          'நபரின் முடிவு அவர்களின் அறியப்பட்ட மதிப்புகள் மற்றும் நம்பிக்கைகளுடன் ஒத்துப்போகிறதா?',
+      'q6_o1':
+          'முடிவு அறியப்பட்ட மதிப்புகள்/நம்பிக்கைகளுடன் முழுமையாக ஒத்துப்போகிறது',
       'q6_o2': 'முடிவு பெரும்பாலும் ஒத்துப்போகிறது',
       'q6_o3': 'அறியப்பட்ட மதிப்புகள்/நம்பிக்கைகளுடன் சில முரண்பாடு',
       'q6_o4': 'முடிவு மதிப்புகள்/நம்பிக்கைகளுடன் முரண்படுவதாகத் தெரிகிறது',
@@ -436,12 +461,14 @@ class LanguageService extends ChangeNotifier {
 
       'q8': 'இந்த முடிவுக்கான திறனை மதிப்பிட இது சரியான நேரமா?',
       'q8_o1': 'சிறந்த நேரம் - நபர் அவர்களின் சிறந்த நிலையில் உள்ளார்',
-      'q8_o2': 'நல்ல நேரம் - நபர் நியாயமான அளவில் விழிப்பாகவும் கவனமாகவும் உள்ளார்',
+      'q8_o2':
+          'நல்ல நேரம் - நபர் நியாயமான அளவில் விழிப்பாகவும் கவனமாகவும் உள்ளார்',
       'q8_o3': 'சில வரம்புகளுடன் ஏற்றுக்கொள்ளக்கூடிய நேரம்',
       'q8_o4': 'உகந்த நேரம் அல்ல - மதிப்பீடு மீண்டும் செய்யப்பட வேண்டும்',
       'q8_o5': 'பொருத்தமான நேரம் அல்ல - மதிப்பீட்டை ஒத்திவைக்கவும்',
 
-      'q9': 'முடிவெடுக்க நபருக்கு உதவ அனைத்து நடைமுறை ஆதரவும் வழங்கப்பட்டுள்ளதா?',
+      'q9':
+          'முடிவெடுக்க நபருக்கு உதவ அனைத்து நடைமுறை ஆதரவும் வழங்கப்பட்டுள்ளதா?',
       'q9_o1': 'அனைத்து நடைமுறை ஆதரவும் வழங்கப்பட்டுள்ளது',
       'q9_o2': 'பெரும்பாலான ஆதரவு விருப்பங்கள் ஆராயப்பட்டுள்ளன',
       'q9_o3': 'சில ஆதரவு வழங்கப்பட்டுள்ளது',

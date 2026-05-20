@@ -19,17 +19,17 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final AuthService _authService = AuthService();
   final DatabaseService _databaseService = DatabaseService();
-  
+
   User? _currentUser;
   bool _isLoading = true;
   int _assessmentCount = 0;
-  
+
   @override
   void initState() {
     super.initState();
     _loadUserData();
   }
-  
+
   Future<void> _loadUserData() async {
     setState(() => _isLoading = true);
     try {
@@ -46,7 +46,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() => _isLoading = false);
     }
   }
-  
+
   Future<void> _logout() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -66,16 +66,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     );
-    
+
     if (confirm == true && mounted) {
       await _authService.logout();
+      if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const LoginScreen()),
         (route) => false,
       );
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -87,7 +88,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         body: const Center(child: CircularProgressIndicator()),
       );
     }
-    
+
     if (_currentUser == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Profile')),
@@ -108,7 +109,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       );
     }
-    
+
     return Scaffold(
       body: CustomScrollView(
         slivers: [
@@ -130,10 +131,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [
-                      AppTheme.primaryBlue,
-                      AppTheme.lightBlue,
-                    ],
+                    colors: [AppTheme.primaryBlue, AppTheme.lightBlue],
                   ),
                 ),
                 child: Center(
@@ -156,7 +154,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
           ),
-          
+
           // Profile Content
           SliverToBoxAdapter(
             child: Padding(
@@ -167,7 +165,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   // User Info Card
                   Card(
                     elevation: 4,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.all(20),
                       child: Column(
@@ -182,28 +182,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          _buildInfoRow(Icons.badge, 'Username', _currentUser!.username),
+                          _buildInfoRow(
+                            Icons.badge,
+                            'Username',
+                            _currentUser!.username,
+                          ),
                           const Divider(height: 24),
-                          _buildInfoRow(Icons.email, 'Email', _currentUser!.email),
+                          _buildInfoRow(
+                            Icons.email,
+                            'Email',
+                            _currentUser!.email,
+                          ),
                           const Divider(height: 24),
-                          _buildInfoRow(Icons.person, 'Role', _currentUser!.role.displayName),
+                          _buildInfoRow(
+                            Icons.person,
+                            'Role',
+                            _currentUser!.role.displayName,
+                          ),
                           if (_currentUser!.department != null) ...[
                             const Divider(height: 24),
-                            _buildInfoRow(Icons.business, 'Department', _currentUser!.department!),
+                            _buildInfoRow(
+                              Icons.business,
+                              'Department',
+                              _currentUser!.department!,
+                            ),
                           ],
                           const Divider(height: 24),
-                          _buildInfoRow(Icons.calendar_today, 'Member Since', DateFormat('MMM dd, yyyy').format(_currentUser!.createdAt)),
+                          _buildInfoRow(
+                            Icons.calendar_today,
+                            'Member Since',
+                            DateFormat(
+                              'MMM dd, yyyy',
+                            ).format(_currentUser!.createdAt),
+                          ),
                         ],
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Statistics Card
                   Card(
                     elevation: 4,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.all(20),
                       child: Column(
@@ -220,27 +244,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
                             children: [
-                              _buildStatItem(Icons.assignment, 'Assessments', _assessmentCount.toString(), AppTheme.primaryBlue),
-                              _buildStatItem(Icons.check_circle, 'Status', _currentUser!.isActive ? 'Active' : 'Inactive', AppTheme.accentGreen),
+                              _buildStatItem(
+                                Icons.assignment,
+                                'Assessments',
+                                _assessmentCount.toString(),
+                                AppTheme.primaryBlue,
+                              ),
+                              _buildStatItem(
+                                Icons.check_circle,
+                                'Status',
+                                _currentUser!.isActive ? 'Active' : 'Inactive',
+                                AppTheme.accentGreen,
+                              ),
                             ],
                           ),
                         ],
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Actions Card
                   Card(
                     elevation: 4,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     child: Column(
                       children: [
                         ListTile(
-                          leading: const Icon(Icons.settings, color: AppTheme.primaryBlue),
+                          leading: const Icon(
+                            Icons.settings,
+                            color: AppTheme.primaryBlue,
+                          ),
                           title: const Text('Settings'),
-                          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 16,
+                          ),
                           onTap: () {
                             Navigator.push(
                               context,
@@ -252,9 +294,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         const Divider(height: 1),
                         ListTile(
-                          leading: const Icon(Icons.help, color: AppTheme.primaryBlue),
+                          leading: const Icon(
+                            Icons.help,
+                            color: AppTheme.primaryBlue,
+                          ),
                           title: const Text('Help & Support'),
-                          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 16,
+                          ),
                           onTap: () {
                             Navigator.push(
                               context,
@@ -266,17 +314,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         const Divider(height: 1),
                         ListTile(
-                          leading: const Icon(Icons.info, color: AppTheme.primaryBlue),
+                          leading: const Icon(
+                            Icons.info,
+                            color: AppTheme.primaryBlue,
+                          ),
                           title: const Text('About'),
-                          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 16,
+                          ),
                           onTap: () => _showAboutDialog(),
                         ),
                       ],
                     ),
                   ),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Logout Button
                   ElevatedButton.icon(
                     onPressed: _logout,
@@ -286,10 +340,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       backgroundColor: AppTheme.errorRed,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 24),
                 ],
               ),
@@ -299,7 +355,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
-  
+
   Widget _buildInfoRow(IconData icon, String label, String value) {
     return Row(
       children: [
@@ -311,10 +367,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               Text(
                 label,
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
+                style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600]),
               ),
               const SizedBox(height: 2),
               Text(
@@ -330,14 +383,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ],
     );
   }
-  
-  Widget _buildStatItem(IconData icon, String label, String value, Color color) {
+
+  Widget _buildStatItem(
+    IconData icon,
+    String label,
+    String value,
+    Color color,
+  ) {
     return Column(
       children: [
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(icon, color: color, size: 32),
@@ -353,15 +411,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         Text(
           label,
-          style: GoogleFonts.inter(
-            fontSize: 12,
-            color: Colors.grey[600],
-          ),
+          style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600]),
         ),
       ],
     );
   }
-  
+
   void _showAboutDialog() {
     showDialog(
       context: context,
@@ -405,4 +460,3 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 }
-

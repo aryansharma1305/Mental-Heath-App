@@ -18,7 +18,7 @@ class DSM5AssessmentScreen extends StatefulWidget {
   State<DSM5AssessmentScreen> createState() => _DSM5AssessmentScreenState();
 }
 
-class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen> 
+class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _pageController = PageController();
@@ -32,7 +32,7 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
   int _currentPage = 0;
   bool _isSubmitting = false;
   bool _showPatientInfo = true;
-  
+
   late AnimationController _animationController;
 
   @override
@@ -70,7 +70,7 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
 
   void _nextPage() {
     final currentQuestion = _questions[_currentPage];
-    
+
     if (!_responses.containsKey(currentQuestion.questionId)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -80,7 +80,7 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
       );
       return;
     }
-    
+
     if (_currentPage < _questions.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
@@ -100,7 +100,7 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
 
   void _handleNextOrSubmit() {
     final currentQuestion = _questions[_currentPage];
-    
+
     if (!_responses.containsKey(currentQuestion.questionId)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -110,7 +110,7 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
       );
       return;
     }
-    
+
     if (_currentPage == _questions.length - 1) {
       _submitAssessment();
     } else {
@@ -125,23 +125,31 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
       // Calculate total score
       int totalScore = 0;
       _responses.forEach((_, score) => totalScore += score);
-      
+
       // Calculate domain scores
       final Map<String, dynamic> stringResponses = {};
       _responses.forEach((key, value) {
         stringResponses[key] = AssessmentQuestions.standardOptions[value];
       });
-      final domainScores = AssessmentQuestions.calculateDomainScores(stringResponses);
-      
+      final domainScores = AssessmentQuestions.calculateDomainScores(
+        stringResponses,
+      );
+      final domainHighestScores =
+          AssessmentQuestions.calculateDomainHighestScores(stringResponses);
+
       // Get flagged domains
-      final flaggedDomains = AssessmentQuestions.getDomainsRequiringFollowUp(domainScores);
-      
+      final flaggedDomains = AssessmentQuestions.getDomainsRequiringFollowUp(
+        domainHighestScores,
+      );
+
       // Get severity interpretation
-      final severity = AssessmentQuestions.getSeverityInterpretation(totalScore);
-      
+      final severity = AssessmentQuestions.getSeverityInterpretation(
+        totalScore,
+      );
+
       // Get current user
       final currentUser = await _authService.getCurrentUserModel();
-      
+
       // Prepare assessment data (anonymised - no names)
       final assessmentData = {
         'patient_id': _patientIdController.text.trim(),
@@ -158,10 +166,10 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
         'flagged_domains': flaggedDomains,
         'created_at': DateTime.now().toIso8601String(),
       };
-      
+
       // Save to local database
       await _saveToDatabase(assessmentData);
-      
+
       if (mounted) {
         _showResultsDialog(totalScore, severity, domainScores, flaggedDomains);
       }
@@ -189,10 +197,13 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
         assessmentDate: DateTime.parse(data['assessment_date']),
         assessorName: data['assessor_name'],
         assessorRole: data['assessor_role'] ?? 'Doctor',
-        assessorUserId: data['assessor_id'] != 'unknown' ? data['assessor_id'] : null,
+        assessorUserId: data['assessor_id'] != 'unknown'
+            ? data['assessor_id']
+            : null,
         decisionContext: 'DSM-5 Assessment',
         responses: data['responses'] as Map<String, dynamic>,
-        overallCapacity: data['severity'], // Mapping Severity to Overall Capacity
+        overallCapacity:
+            data['severity'], // Mapping Severity to Overall Capacity
         recommendations: (data['flagged_domains'] as List).join(', '),
         createdAt: DateTime.parse(data['created_at']),
         updatedAt: DateTime.now(),
@@ -202,7 +213,7 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
 
       await DatabaseService().insertAssessment(assessment);
       debugPrint('Assessment saved to database successfully');
-      
+
       // Also save to SharedPreferences as backup/legacy support
       final prefs = await SharedPreferences.getInstance();
       final existingJson = prefs.getStringList('dsm5_assessments') ?? [];
@@ -210,12 +221,16 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
       await prefs.setStringList('dsm5_assessments', existingJson);
     } catch (e) {
       debugPrint('Error saving to database: $e');
-      throw e; // Re-throw to be caught by caller
+      rethrow; // Re-throw to be caught by caller
     }
   }
 
-  void _showResultsDialog(int totalScore, String severity,
-      Map<String, int> domainScores, List<String> flaggedDomains) {
+  void _showResultsDialog(
+    int totalScore,
+    String severity,
+    Map<String, int> domainScores,
+    List<String> flaggedDomains,
+  ) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -226,13 +241,15 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppTheme.successGreen.withOpacity(0.2),
+                color: AppTheme.successGreen.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(Icons.check_circle, color: AppTheme.successGreen),
             ),
             const SizedBox(width: 12),
-            const Expanded(child: Text('Level 1 Complete', overflow: TextOverflow.ellipsis)),
+            const Expanded(
+              child: Text('Level 1 Complete', overflow: TextOverflow.ellipsis),
+            ),
           ],
         ),
         content: SingleChildScrollView(
@@ -248,16 +265,22 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppTheme.warningOrange.withOpacity(0.1),
+                    color: AppTheme.warningOrange.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppTheme.warningOrange.withOpacity(0.3)),
+                    border: Border.all(
+                      color: AppTheme.warningOrange.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.flag, size: 16, color: AppTheme.warningOrange),
+                          Icon(
+                            Icons.flag,
+                            size: 16,
+                            color: AppTheme.warningOrange,
+                          ),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
@@ -272,44 +295,63 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
                         ],
                       ),
                       const SizedBox(height: 8),
-                      ...flaggedDomains.map((domain) => Padding(
-                        padding: const EdgeInsets.only(left: 8, bottom: 4),
-                        child: Row(
-                          children: [
-                            Icon(Icons.chevron_right, size: 14, color: AppTheme.warningOrange),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                domain,
-                                style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMedium),
+                      ...flaggedDomains.map(
+                        (domain) => Padding(
+                          padding: const EdgeInsets.only(left: 8, bottom: 4),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.chevron_right,
+                                size: 14,
+                                color: AppTheme.warningOrange,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  domain,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: AppTheme.textMedium,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      )),
+                      ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'A Level 2 assessment is recommended for the flagged domains above.',
-                  style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textGrey),
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: AppTheme.textGrey,
+                  ),
                 ),
               ] else ...[
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppTheme.successGreen.withOpacity(0.1),
+                    color: AppTheme.successGreen.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.check_circle_outline, size: 16, color: AppTheme.successGreen),
+                      Icon(
+                        Icons.check_circle_outline,
+                        size: 16,
+                        color: AppTheme.successGreen,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           'No domains require Level 2 follow-up.',
-                          style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMedium),
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: AppTheme.textMedium,
+                          ),
                         ),
                       ),
                     ],
@@ -340,7 +382,7 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
                     ),
                   ),
                 ).then((done) {
-                  if (done == true && mounted) {
+                  if (done == true && context.mounted) {
                     Navigator.pop(context, true);
                   }
                 });
@@ -420,7 +462,7 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
         centerTitle: true,
       ),
       body: SafeArea(
-        child: _showPatientInfo 
+        child: _showPatientInfo
             ? _buildPatientInfoForm()
             : _buildAssessmentForm(),
       ),
@@ -446,7 +488,7 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Icon(
@@ -481,9 +523,9 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
               ],
             ),
           ).animate().fadeIn().slideY(begin: -0.2, end: 0),
-          
+
           const SizedBox(height: 32),
-          
+
           // Anonymised Patient ID
           Text(
             'Anonymised Patient ID',
@@ -506,16 +548,18 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
               ),
             ),
           ).animate().fadeIn(delay: 100.ms).slideX(begin: -0.1, end: 0),
-          
+
           const SizedBox(height: 32),
-          
+
           // Info card
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppTheme.skyBlue.withOpacity(0.5),
+              color: AppTheme.skyBlue.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.infoBlue.withOpacity(0.3)),
+              border: Border.all(
+                color: AppTheme.infoBlue.withValues(alpha: 0.3),
+              ),
             ),
             child: Row(
               children: [
@@ -533,9 +577,9 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
               ],
             ),
           ).animate().fadeIn(delay: 400.ms),
-          
+
           const SizedBox(height: 40),
-          
+
           // Start button
           SizedBox(
             width: double.infinity,
@@ -591,7 +635,9 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
                   child: LinearProgressIndicator(
                     value: (_currentPage + 1) / _questions.length,
                     backgroundColor: AppTheme.dividerColor,
-                    valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      AppTheme.primaryColor,
+                    ),
                     minHeight: 8,
                   ),
                 ),
@@ -607,9 +653,12 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withOpacity(0.1),
+                        color: AppTheme.primaryColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
@@ -626,7 +675,7 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
               ],
             ),
           ),
-          
+
           // Questions PageView
           Expanded(
             child: PageView.builder(
@@ -639,7 +688,7 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
               },
             ),
           ),
-          
+
           // Navigation buttons
           Container(
             padding: const EdgeInsets.all(24),
@@ -647,7 +696,7 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, -4),
                 ),
@@ -661,7 +710,10 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
                       onPressed: _previousPage,
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        side: BorderSide(color: AppTheme.dividerColor, width: 2),
+                        side: BorderSide(
+                          color: AppTheme.dividerColor,
+                          width: 2,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -682,9 +734,9 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
                       ),
                     ),
                   ),
-                
+
                 if (_currentPage > 0) const SizedBox(width: 16),
-                
+
                 Expanded(
                   flex: _currentPage == 0 ? 1 : 1,
                   child: ElevatedButton(
@@ -706,7 +758,9 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
                             height: 24,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           )
                         : Row(
@@ -746,7 +800,7 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 16),
-          
+
           // Question card
           Container(
             padding: const EdgeInsets.all(24),
@@ -778,9 +832,9 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
               ],
             ),
           ).animate().fadeIn().slideY(begin: 0.1, end: 0),
-          
+
           const SizedBox(height: 24),
-          
+
           // Response options
           Text(
             'Select your response:',
@@ -790,7 +844,7 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Horizontal score buttons
           ..._buildScoreButtons(question),
         ],
@@ -801,7 +855,7 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
   List<Widget> _buildScoreButtons(Question question) {
     final options = AssessmentQuestions.standardOptions;
     final selectedScore = _responses[question.questionId];
-    
+
     final colors = [
       AppTheme.successGreen,
       AppTheme.mintGreen,
@@ -809,11 +863,11 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
       AppTheme.warningOrange,
       AppTheme.errorRed,
     ];
-    
+
     return List.generate(options.length, (index) {
       final isSelected = selectedScore == index;
       final color = colors[index];
-      
+
       return Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: GestureDetector(
@@ -826,19 +880,21 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: isSelected ? color.withOpacity(0.15) : Colors.white,
+              color: isSelected ? color.withValues(alpha: 0.15) : Colors.white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: isSelected ? color : AppTheme.dividerColor,
                 width: isSelected ? 2 : 1,
               ),
-              boxShadow: isSelected ? [
-                BoxShadow(
-                  color: color.withOpacity(0.2),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ] : [],
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.2),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : [],
             ),
             child: Row(
               children: [
@@ -847,7 +903,7 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: isSelected ? color : color.withOpacity(0.2),
+                    color: isSelected ? color : color.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: Center(
@@ -862,19 +918,23 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
                   ),
                 ),
                 const SizedBox(width: 16),
-                
+
                 // Option text
                 Expanded(
                   child: Text(
                     options[index],
                     style: GoogleFonts.inter(
                       fontSize: 14,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                      color: isSelected ? AppTheme.textDark : AppTheme.textMedium,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.normal,
+                      color: isSelected
+                          ? AppTheme.textDark
+                          : AppTheme.textMedium,
                     ),
                   ),
                 ),
-                
+
                 // Check icon
                 if (isSelected)
                   Icon(Icons.check_circle, color: color, size: 24),

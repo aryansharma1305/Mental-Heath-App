@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
@@ -23,7 +22,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _confirmPasswordController = TextEditingController();
   final _fullNameController = TextEditingController();
   final _departmentController = TextEditingController();
-  
+
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -35,7 +34,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     UserRole.psychiatrist,
     // Admin role removed - can only be added via database
   ];
-  
+
   UserRole? _selectedRole;
 
   final List<String> _departments = [
@@ -96,8 +95,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         password: _passwordController.text,
         fullName: _fullNameController.text.trim(),
         role: _selectedRole!.name,
-        department: _selectedRole!.isHealthcareProfessional 
-            ? _departmentController.text 
+        department: _selectedRole!.isHealthcareProfessional
+            ? _departmentController.text
             : null,
       );
 
@@ -116,7 +115,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['message'] ?? 'Registration failed. Please try again.'),
+              content: Text(
+                result['message'] ?? 'Registration failed. Please try again.',
+              ),
               backgroundColor: AppTheme.errorRed,
             ),
           );
@@ -177,7 +178,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             colors: [
               AppTheme.primaryBlue,
               AppTheme.lightBlue,
-              AppTheme.lightBlue.withOpacity(0.8),
+              AppTheme.lightBlue.withValues(alpha: 0.8),
             ],
           ),
         ),
@@ -190,7 +191,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const SizedBox(height: 20),
-                
+
                 // Back button
                 Align(
                   alignment: Alignment.centerLeft,
@@ -199,9 +200,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     onPressed: () => Navigator.pop(context),
                   ),
                 ).animate().fadeIn(delay: 100.ms),
-                
+
                 const SizedBox(height: 20),
-                
+
                 // Logo and Title Section
                 Container(
                   width: isSmallScreen ? 80 : 100,
@@ -211,7 +212,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     borderRadius: BorderRadius.circular(25),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
+                        color: Colors.black.withValues(alpha: 0.2),
                         blurRadius: 15,
                         offset: const Offset(0, 8),
                       ),
@@ -223,9 +224,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     color: AppTheme.primaryBlue,
                   ),
                 ).animate().scale(delay: 200.ms, duration: 600.ms),
-                
+
                 const SizedBox(height: 24),
-                
+
                 Text(
                   'Create Account',
                   style: GoogleFonts.poppins(
@@ -234,21 +235,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     color: Colors.white,
                   ),
                 ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.3),
-                
+
                 const SizedBox(height: 8),
-                
+
                 Text(
                   'Join our healthcare professional network',
                   style: GoogleFonts.inter(
                     fontSize: isSmallScreen ? 14 : 16,
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                     fontWeight: FontWeight.w300,
                   ),
                   textAlign: TextAlign.center,
                 ).animate().fadeIn(delay: 600.ms),
-                
+
                 SizedBox(height: isSmallScreen ? 24 : 32),
-                
+
                 // Registration Form
                 CustomCard(
                   padding: EdgeInsets.all(isSmallScreen ? 16.0 : 20.0),
@@ -263,9 +264,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           style: AppTheme.headingMedium,
                           textAlign: TextAlign.center,
                         ),
-                        
+
                         const SizedBox(height: 32),
-                        
+
                         // Full Name
                         CustomInputField(
                           label: 'Full Name',
@@ -279,9 +280,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             return null;
                           },
                         ),
-                        
+
                         const SizedBox(height: 20),
-                        
+
                         // Username
                         CustomInputField(
                           label: 'Username/Staff ID',
@@ -298,9 +299,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             return null;
                           },
                         ),
-                        
+
                         const SizedBox(height: 20),
-                        
+
                         // Email
                         CustomInputField(
                           label: 'Email Address',
@@ -318,9 +319,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             return null;
                           },
                         ),
-                        
+
                         const SizedBox(height: 20),
-                        
+
                         // Password
                         CustomInputField(
                           label: 'Password',
@@ -332,13 +333,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ? Icons.visibility_outlined
                               : Icons.visibility_off_outlined,
                           onSuffixTap: () {
-                            setState(() => _obscurePassword = !_obscurePassword);
+                            setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            );
                           },
                           validator: _validatePassword,
                         ),
-                        
+
                         const SizedBox(height: 20),
-                        
+
                         // Confirm Password
                         CustomInputField(
                           label: 'Confirm Password',
@@ -350,7 +353,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ? Icons.visibility_outlined
                               : Icons.visibility_off_outlined,
                           onSuffixTap: () {
-                            setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
+                            setState(
+                              () => _obscureConfirmPassword =
+                                  !_obscureConfirmPassword,
+                            );
                           },
                           validator: (value) {
                             if (value == null || value.isEmpty) {
@@ -362,9 +368,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             return null;
                           },
                         ),
-                        
+
                         const SizedBox(height: 20),
-                        
+
                         // Role Selection
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -375,7 +381,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                             const SizedBox(height: 8),
                             DropdownButtonFormField<UserRole>(
-                              value: _selectedRole,
+                              initialValue: _selectedRole,
                               decoration: const InputDecoration(
                                 hintText: 'Select your role',
                                 prefixIcon: Icon(Icons.person_outline),
@@ -385,7 +391,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 return DropdownMenuItem(
                                   value: role,
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(role.displayName),
                                       Text(
@@ -410,20 +417,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                           ],
                         ),
-                        
+
                         // Department (only for healthcare professionals)
-                        if (_selectedRole != null && _selectedRole!.isHealthcareProfessional) ...[
+                        if (_selectedRole != null &&
+                            _selectedRole!.isHealthcareProfessional) ...[
                           const SizedBox(height: 20),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'Department',
-                                style: AppTheme.labelLarge,
-                              ),
+                              Text('Department', style: AppTheme.labelLarge),
                               const SizedBox(height: 8),
                               DropdownButtonFormField<String>(
-                                value: _departmentController.text.isEmpty
+                                initialValue: _departmentController.text.isEmpty
                                     ? null
                                     : _departmentController.text,
                                 decoration: const InputDecoration(
@@ -451,9 +456,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ],
                           ),
                         ],
-                        
+
                         const SizedBox(height: 24),
-                        
+
                         // Terms and Conditions
                         Row(
                           children: [
@@ -472,9 +477,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                           ],
                         ),
-                        
+
                         const SizedBox(height: 32),
-                        
+
                         // Register Button
                         CustomButton(
                           text: 'Create Account',
@@ -482,9 +487,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           isLoading: _isLoading,
                           icon: Icons.person_add,
                         ),
-                        
+
                         const SizedBox(height: 24),
-                        
+
                         // Login Link
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -509,9 +514,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                 ).animate().slideY(delay: 800.ms, begin: 0.3),
-                
+
                 const SizedBox(height: 32),
-                
+
                 // Security Notice
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -519,7 +524,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     color: Colors.blue[50],
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: AppTheme.primaryBlue.withOpacity(0.2),
+                      color: AppTheme.primaryBlue.withValues(alpha: 0.2),
                     ),
                   ),
                   child: Row(
@@ -549,4 +554,3 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 }
-

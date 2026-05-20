@@ -23,7 +23,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
   final SupabaseService _supabaseService = SupabaseService();
   final AuthService _authService = AuthService();
   final StatisticsService _statisticsService = StatisticsService();
-  
+
   app_models.User? _currentUser;
   List<Assessment> _pendingAssessments = [];
   List<Assessment> _recentAssessments = [];
@@ -41,27 +41,30 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     try {
       final user = await _authService.getCurrentUserModel();
       final userId = await _authService.getCurrentUserId();
-      
+
       if (SupabaseService.isAvailable && user != null && userId != null) {
         // Load assessments created by this doctor only
-        final doctorAssessments = await _supabaseService.getAssessmentsByAssessorId(userId);
-        
+        final doctorAssessments = await _supabaseService
+            .getAssessmentsByAssessorId(userId);
+
         _pendingAssessments = doctorAssessments
             .where((a) => a.status == 'pending')
             .take(5)
             .toList();
-        
+
         // Load recent assessments by this doctor
         _recentAssessments = doctorAssessments
             .where((a) => a.status != 'pending')
             .take(5)
             .toList();
-        
+
         // Load doctor stats
         if (user.fullName.isNotEmpty) {
-          _doctorStats = await _statisticsService.getAssessorPerformance(user.fullName);
+          _doctorStats = await _statisticsService.getAssessorPerformance(
+            user.fullName,
+          );
         }
-        
+
         setState(() {
           _currentUser = user;
           _isLoading = false;
@@ -101,23 +104,26 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                     // Welcome Section
                     _buildWelcomeSection(),
                     const SizedBox(height: 24),
-                    
+
                     // Quick Stats
                     _buildQuickStats(),
                     const SizedBox(height: 24),
-                    
+
                     // Quick Actions
                     _buildQuickActions(),
                     const SizedBox(height: 24),
-                    
+
                     // Pending Reviews
                     if (_pendingAssessments.isNotEmpty) ...[
-                      _buildSectionHeader('Pending Reviews', Icons.pending_actions),
+                      _buildSectionHeader(
+                        'Pending Reviews',
+                        Icons.pending_actions,
+                      ),
                       const SizedBox(height: 12),
                       _buildPendingAssessmentsList(),
                       const SizedBox(height: 24),
                     ],
-                    
+
                     // Recent Activity
                     if (_recentAssessments.isNotEmpty) ...[
                       _buildSectionHeader('Recent Activity', Icons.history),
@@ -144,7 +150,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
             end: Alignment.bottomRight,
             colors: [
               AppTheme.primaryColor,
-              AppTheme.primaryColor.withOpacity(0.7),
+              AppTheme.primaryColor.withValues(alpha: 0.7),
             ],
           ),
         ),
@@ -172,7 +178,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                     greeting,
                     style: GoogleFonts.inter(
                       fontSize: 14,
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -190,7 +196,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                       _currentUser!.department!,
                       style: GoogleFonts.inter(
                         fontSize: 12,
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 0.8),
                       ),
                     ),
                   ],
@@ -213,7 +219,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
   Widget _buildQuickStats() {
     final totalReviewed = _doctorStats?['totalAssessments'] ?? 0;
     final avgPerWeek = _doctorStats?['averagePerWeek'] ?? 0.0;
-    
+
     return Row(
       children: [
         Expanded(
@@ -246,7 +252,12 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -254,7 +265,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
         ),
         child: Column(
           children: [
@@ -271,10 +282,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
             const SizedBox(height: 4),
             Text(
               label,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: Colors.grey[700],
-              ),
+              style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[700]),
             ),
           ],
         ),
@@ -359,7 +367,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [color.withOpacity(0.8), color],
+              colors: [color.withValues(alpha: 0.8), color],
             ),
           ),
           padding: const EdgeInsets.all(16),
@@ -393,10 +401,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
         const SizedBox(width: 8),
         Text(
           title,
-          style: GoogleFonts.poppins(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+          style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold),
         ),
       ],
     );
@@ -412,7 +417,9 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
           elevation: 1,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: ListTile(
             leading: CircleAvatar(
               backgroundColor: Colors.orange,
@@ -454,7 +461,9 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
           elevation: 1,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: ListTile(
             leading: CircleAvatar(
               backgroundColor: _getStatusColor(assessment.status),

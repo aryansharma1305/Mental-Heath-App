@@ -31,6 +31,6 @@ class TTSService {
     await _flutterTts.stop();
     _isPlaying = false;
   }
-  
+
   bool get isPlaying => _isPlaying;
 }

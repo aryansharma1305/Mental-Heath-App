@@ -5,16 +5,18 @@ import '../models/assessment.dart';
 import '../services/supabase_service.dart';
 import 'package:mental_capacity_assessment/l10n/app_localizations.dart';
 import 'assessment_detail_screen.dart';
+
 class AssessmentListScreen extends StatefulWidget {
   const AssessmentListScreen({super.key});
 
   @override
   State<AssessmentListScreen> createState() => _AssessmentListScreenState();
 }
+
 class _AssessmentListScreenState extends State<AssessmentListScreen> {
   final SupabaseService _supabaseService = SupabaseService();
   final TextEditingController _searchController = TextEditingController();
-  
+
   List<Assessment> _assessments = [];
   List<Assessment> _filteredAssessments = [];
   bool _isLoading = true;
@@ -43,7 +45,11 @@ class _AssessmentListScreenState extends State<AssessmentListScreen> {
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${AppLocalizations.of(context)!.errorLoadingAssessments}: $e')),
+          SnackBar(
+            content: Text(
+              '${AppLocalizations.of(context)!.errorLoadingAssessments}: $e',
+            ),
+          ),
         );
       }
     }
@@ -55,9 +61,15 @@ class _AssessmentListScreenState extends State<AssessmentListScreen> {
         _filteredAssessments = _assessments;
       } else {
         _filteredAssessments = _assessments.where((assessment) {
-          return assessment.patientName.toLowerCase().contains(query.toLowerCase()) ||
-                 assessment.patientId.toLowerCase().contains(query.toLowerCase()) ||
-                 assessment.assessorName.toLowerCase().contains(query.toLowerCase());
+          return assessment.patientName.toLowerCase().contains(
+                query.toLowerCase(),
+              ) ||
+              assessment.patientId.toLowerCase().contains(
+                query.toLowerCase(),
+              ) ||
+              assessment.assessorName.toLowerCase().contains(
+                query.toLowerCase(),
+              );
         }).toList();
       }
     });
@@ -68,16 +80,24 @@ class _AssessmentListScreenState extends State<AssessmentListScreen> {
     setState(() {
       switch (_sortBy) {
         case 'date_desc':
-          _filteredAssessments.sort((a, b) => b.assessmentDate.compareTo(a.assessmentDate));
+          _filteredAssessments.sort(
+            (a, b) => b.assessmentDate.compareTo(a.assessmentDate),
+          );
           break;
         case 'date_asc':
-          _filteredAssessments.sort((a, b) => a.assessmentDate.compareTo(b.assessmentDate));
+          _filteredAssessments.sort(
+            (a, b) => a.assessmentDate.compareTo(b.assessmentDate),
+          );
           break;
         case 'name_asc':
-          _filteredAssessments.sort((a, b) => a.patientName.compareTo(b.patientName));
+          _filteredAssessments.sort(
+            (a, b) => a.patientName.compareTo(b.patientName),
+          );
           break;
         case 'name_desc':
-          _filteredAssessments.sort((a, b) => b.patientName.compareTo(a.patientName));
+          _filteredAssessments.sort(
+            (a, b) => b.patientName.compareTo(a.patientName),
+          );
           break;
       }
     });
@@ -177,161 +197,178 @@ class _AssessmentListScreenState extends State<AssessmentListScreen> {
               onChanged: _filterAssessments,
             ),
           ),
-          
+
           // Results count
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
                 Text(
-                  AppLocalizations.of(context)!.assessmentsCount(_filteredAssessments.length),
-                  style: const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 14,
-                  ),
+                  AppLocalizations.of(
+                    context,
+                  )!.assessmentsCount(_filteredAssessments.length),
+                  style: const TextStyle(color: Colors.grey, fontSize: 14),
                 ),
               ],
             ),
           ),
-          
+
           // Assessment list
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _filteredAssessments.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              _searchController.text.isNotEmpty
-                                  ? Icons.search_off
-                                  : Icons.assignment,
-                              size: 64,
-                              color: Colors.grey,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              _searchController.text.isNotEmpty
-                                  ? AppLocalizations.of(context)!.noAssessmentsFound
-                                  : AppLocalizations.of(context)!.noAssessmentsYet,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                color: Colors.grey,
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          _searchController.text.isNotEmpty
+                              ? Icons.search_off
+                              : Icons.assignment,
+                          size: 64,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          _searchController.text.isNotEmpty
+                              ? AppLocalizations.of(context)!.noAssessmentsFound
+                              : AppLocalizations.of(context)!.noAssessmentsYet,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _searchController.text.isNotEmpty
+                              ? AppLocalizations.of(context)!.adjustSearchTerms
+                              : AppLocalizations.of(
+                                  context,
+                                )!.createFirstAssessment,
+                          style: const TextStyle(color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  )
+                : RefreshIndicator(
+                    onRefresh: _loadAssessments,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _filteredAssessments.length,
+                      itemBuilder: (context, index) {
+                        final assessment = _filteredAssessments[index];
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.all(16),
+                            leading: CircleAvatar(
+                              backgroundColor: _getCapacityColor(
+                                assessment.overallCapacity,
+                              ),
+                              child: const Icon(
+                                Icons.person,
+                                color: Colors.white,
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _searchController.text.isNotEmpty
-                                  ? AppLocalizations.of(context)!.adjustSearchTerms
-                                  : AppLocalizations.of(context)!.createFirstAssessment,
-                              style: const TextStyle(color: Colors.grey),
+                            title: Text(
+                              assessment.patientName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ],
-                        ),
-                      )
-                    : RefreshIndicator(
-                        onRefresh: _loadAssessments,
-                        child: ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _filteredAssessments.length,
-                          itemBuilder: (context, index) {
-                            final assessment = _filteredAssessments[index];
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              child: ListTile(
-                                contentPadding: const EdgeInsets.all(16),
-                                leading: CircleAvatar(
-                                  backgroundColor: _getCapacityColor(assessment.overallCapacity),
-                                  child: const Icon(Icons.person, color: Colors.white),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 4),
+                                Text(
+                                  'ID: ${assessment.patientId}',
+                                  style: GoogleFonts.inter(fontSize: 12),
                                 ),
-                                title: Text(
-                                  assessment.patientName,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                Text(
+                                  'Assessor: ${assessment.assessorName}',
+                                  style: GoogleFonts.inter(fontSize: 12),
                                 ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                Text(
+                                  'Date: ${DateFormat('MMM d, y').format(assessment.assessmentDate)}',
+                                  style: GoogleFonts.inter(fontSize: 12),
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
                                   children: [
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'ID: ${assessment.patientId}',
-                                      style: GoogleFonts.inter(fontSize: 12),
-                                    ),
-                                    Text(
-                                      'Assessor: ${assessment.assessorName}',
-                                      style: GoogleFonts.inter(fontSize: 12),
-                                    ),
-                                    Text(
-                                      'Date: ${DateFormat('MMM d, y').format(assessment.assessmentDate)}',
-                                      style: GoogleFonts.inter(fontSize: 12),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      children: [
-                                        if (assessment.status != null)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 4,
-                                            ),
-                                            margin: const EdgeInsets.only(right: 8),
-                                            decoration: BoxDecoration(
-                                              color: _getStatusColor(assessment.status),
-                                              borderRadius: BorderRadius.circular(12),
-                                            ),
-                                            child: Text(
-                                              _getStatusLabel(context, assessment.status),
-                                              style: GoogleFonts.inter(
-                                                color: Colors.white,
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
+                                    if (assessment.status != null)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        margin: const EdgeInsets.only(right: 8),
+                                        decoration: BoxDecoration(
+                                          color: _getStatusColor(
+                                            assessment.status,
                                           ),
-                                        Expanded(
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 4,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: _getCapacityColor(assessment.overallCapacity),
-                                              borderRadius: BorderRadius.circular(12),
-                                            ),
-                                            child: Text(
-                                              assessment.overallCapacity,
-                                              style: GoogleFonts.inter(
-                                                color: Colors.white,
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
                                           ),
                                         ),
-                                      ],
+                                        child: Text(
+                                          _getStatusLabel(
+                                            context,
+                                            assessment.status,
+                                          ),
+                                          style: GoogleFonts.inter(
+                                            color: Colors.white,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                    Expanded(
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: _getCapacityColor(
+                                            assessment.overallCapacity,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          assessment.overallCapacity,
+                                          style: GoogleFonts.inter(
+                                            color: Colors.white,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ),
-                                trailing: const Icon(Icons.arrow_forward_ios),
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => AssessmentDetailScreen(
-                                        assessmentId: assessment.id!,
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            );
-                          },
-                        ),
-                      ),
+                              ],
+                            ),
+                            trailing: const Icon(Icons.arrow_forward_ios),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => AssessmentDetailScreen(
+                                    assessmentId: assessment.id!,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  ),
           ),
         ],
       ),

@@ -1,8 +1,9 @@
 /// MHCA Treatment Capacity Assessment Questions Service
-/// 
+///
 /// Digitized version of the SRM Medical College Hospital
 /// "Capacity Assessment for Treatment decisions including Admission"
 /// form, per Mental Healthcare Act (MHCA) 2017, Sections 102/103.
+library;
 
 class MHCAAssessmentQuestions {
   // ========== PURPOSE OPTIONS ==========
@@ -25,7 +26,8 @@ class MHCAAssessmentQuestions {
     return {
       'id': 'gate',
       'section': 'Obvious Lack of Capacity',
-      'text': 'Is he/she in a condition, that one cannot have any kind of '
+      'text':
+          'Is he/she in a condition, that one cannot have any kind of '
           'meaningful conversation with him/her (such as being violent, '
           'excited, catatonic, stuporous, delirious, under alcohol or '
           'substance intoxication/severe withdrawal, or any other)?',
@@ -51,7 +53,8 @@ class MHCAAssessmentQuestions {
         'id': '1b',
         'section': '1. Understanding',
         'label': 'B',
-        'text': 'Has he/she been provided relevant information about mental '
+        'text':
+            'Has he/she been provided relevant information about mental '
             'healthcare and treatment pertaining to the illness in question?',
         'type': 'yesNo',
         'options': yesNoOptions,
@@ -62,7 +65,8 @@ class MHCAAssessmentQuestions {
         'id': '1c',
         'section': '1. Understanding',
         'label': 'C',
-        'text': 'Is he/she able to follow simple commands like '
+        'text':
+            'Is he/she able to follow simple commands like '
             '(i) show your tongue (ii) close your eyes?',
         'type': 'yesNoCannotAssess',
         'options': yesNoCannotOptions,
@@ -87,7 +91,8 @@ class MHCAAssessmentQuestions {
         'id': '2a',
         'section': '2. Appreciating',
         'label': 'A',
-        'text': 'Does the individual agree to receive treatment '
+        'text':
+            'Does the individual agree to receive treatment '
             'suggested by the treating team?',
         'type': 'yesNoCannotAssess',
         'options': yesNoCannotOptions,
@@ -99,7 +104,8 @@ class MHCAAssessmentQuestions {
         'id': '2b',
         'section': '2. Appreciating',
         'label': 'B',
-        'text': 'Does he/she explain why he/she has agreed to receive treatment?',
+        'text':
+            'Does he/she explain why he/she has agreed to receive treatment?',
         'type': 'yesNoCannotAssess',
         'options': ['Yes', 'No', 'Cannot assess'],
         'hasExplanation': true,
@@ -126,7 +132,8 @@ class MHCAAssessmentQuestions {
         'id': '3a',
         'section': '3. Communicating',
         'label': 'A',
-        'text': 'Is the individual able to communicate his/her decision '
+        'text':
+            'Is the individual able to communicate his/her decision '
             'by means of speech, writing, expression, gesture or any other means?',
         'type': 'yesNoCannotAssess',
         'options': yesNoCannotOptions,
@@ -140,7 +147,8 @@ class MHCAAssessmentQuestions {
     return {
       'id': 'determination',
       'section': '4. Final Determination',
-      'text': 'Based on the examination and relevant history, behavioural '
+      'text':
+          'Based on the examination and relevant history, behavioural '
           'observation, clinical findings and mental status examination '
           'findings noted in the medical records, I believe that the patient:',
       'options': [
@@ -156,7 +164,8 @@ class MHCAAssessmentQuestions {
     return {
       'id': 'patient_consent',
       'section': '5. Patient Consent',
-      'text': 'I agree to make decisions in respect of my mental healthcare '
+      'text':
+          'I agree to make decisions in respect of my mental healthcare '
           'and treatment.',
       'showWhen': {'determination': 'a'},
       'requiresSignature': true,
@@ -168,7 +177,8 @@ class MHCAAssessmentQuestions {
     return {
       'id': 'representative_consent',
       'section': '6. Nominated Representative Consent',
-      'text': 'I, the nominated representative, agree to make decisions '
+      'text':
+          'I, the nominated representative, agree to make decisions '
           'with respect of his/her treatment.',
       'showWhen': {'determination': 'b'},
       'requiresSignature': true,
@@ -189,7 +199,7 @@ class MHCAAssessmentQuestions {
 
   // ========== SCORING HELPERS ==========
 
-  /// Determine if the assessment shows capacity 
+  /// Determine if the assessment shows capacity
   static String getDetermination(Map<String, dynamic> responses) {
     // If obvious lack of capacity
     if (responses['gate'] == 'Yes') {
@@ -230,7 +240,12 @@ class MHCAAssessmentQuestions {
       'determination': determination,
       'answered_count': answeredCount,
       'total_questions': totalQuestions,
-      'section_1_complete': _isSectionComplete(responses, ['1a', '1b', '1c', '1d']),
+      'section_1_complete': _isSectionComplete(responses, [
+        '1a',
+        '1b',
+        '1c',
+        '1d',
+      ]),
       'section_2_complete': _isSectionComplete(responses, ['2a']),
       'section_3_complete': _isSectionComplete(responses, ['3a']),
       'section_4_complete': responses.containsKey('determination'),
@@ -238,7 +253,9 @@ class MHCAAssessmentQuestions {
   }
 
   static bool _isSectionComplete(
-      Map<String, dynamic> responses, List<String> questionIds) {
+    Map<String, dynamic> responses,
+    List<String> questionIds,
+  ) {
     return questionIds.every((id) => responses.containsKey(id));
   }
 }

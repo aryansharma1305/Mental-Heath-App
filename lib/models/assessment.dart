@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 class Assessment {
   final int? id;
   final String patientId;
@@ -63,7 +64,7 @@ class Assessment {
       'assessor_name': assessorName,
       'assessor_role': assessorRole,
       'decision_context': decisionContext,
-      'responses': responses is String ? responses : jsonEncode(responses),
+      'responses': jsonEncode(responses),
       'overall_capacity': overallCapacity,
       'recommendations': recommendations,
       'created_at': createdAt.toIso8601String(),
@@ -79,22 +80,24 @@ class Assessment {
   }
 
   factory Assessment.fromMap(Map<String, dynamic> map) {
+    final now = DateTime.now();
+
     return Assessment(
       id: map['id'],
       patientId: map['patient_id'] ?? '',
       patientName: map['patient_name'] ?? '',
-      assessmentDate: DateTime.parse(map['assessment_date']),
+      assessmentDate: _parseDate(map['assessment_date']) ?? now,
       assessorName: map['assessor_name'] ?? '',
       assessorRole: map['assessor_role'] ?? '',
       decisionContext: map['decision_context'] ?? '',
       responses: _parseResponses(map['responses']),
       overallCapacity: map['overall_capacity'] ?? '',
       recommendations: map['recommendations'] ?? '',
-      createdAt: DateTime.parse(map['created_at']),
-      updatedAt: DateTime.parse(map['updated_at']),
+      createdAt: _parseDate(map['created_at']) ?? now,
+      updatedAt: _parseDate(map['updated_at']) ?? now,
       status: map['status'] as String?,
       reviewedBy: map['reviewed_by'] as String?,
-      reviewedAt: map['reviewed_at'] != null ? DateTime.parse(map['reviewed_at']) : null,
+      reviewedAt: _parseDate(map['reviewed_at']),
       doctorNotes: map['doctor_notes'] as String?,
       templateId: map['template_id'] as int?,
       assessorUserId: map['assessor_user_id'] as String?,
@@ -148,15 +151,38 @@ class Assessment {
 
   static Map<String, dynamic> _parseResponses(dynamic responsesData) {
     if (responsesData is Map) {
-      return Map<String, dynamic>.from(responsesData);
+      final responses = Map<String, dynamic>.from(responsesData);
+      final raw = responses['raw'];
+      if (responses.length == 1 && raw is String) {
+        try {
+          final decodedRaw = jsonDecode(raw);
+          if (decodedRaw is Map) {
+            return Map<String, dynamic>.from(decodedRaw);
+          }
+        } catch (_) {
+          // Keep the original raw value below.
+        }
+      }
+      return responses;
     } else if (responsesData is String) {
       try {
-        // Try to parse as JSON string
-        return {'raw': responsesData};
+        final decoded = jsonDecode(responsesData);
+        if (decoded is Map) {
+          return Map<String, dynamic>.from(decoded);
+        }
+        return {'raw': decoded};
       } catch (e) {
         return {'raw': responsesData};
       }
     }
     return {'raw': responsesData.toString()};
+  }
+
+  static DateTime? _parseDate(dynamic value) {
+    if (value is DateTime) return value;
+    if (value is String && value.isNotEmpty) {
+      return DateTime.tryParse(value);
+    }
+    return null;
   }
 }

@@ -1,32 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:sqflite/sqflite.dart';
 import '../models/question.dart';
-import '../models/assessment.dart';
-import '../services/question_service.dart';
 import '../services/supabase_service.dart';
-import '../services/database_service.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
-import '../widgets/custom_widgets.dart';
-import 'package:intl/intl.dart';
 
 class PatientAssessmentScreen extends StatefulWidget {
   final int templateId;
-  
+
   const PatientAssessmentScreen({super.key, required this.templateId});
 
   @override
-  State<PatientAssessmentScreen> createState() => _PatientAssessmentScreenState();
+  State<PatientAssessmentScreen> createState() =>
+      _PatientAssessmentScreenState();
 }
 
 class _PatientAssessmentScreenState extends State<PatientAssessmentScreen> {
   final _formKey = GlobalKey<FormState>();
   final _pageController = PageController();
-  final QuestionService _questionService = QuestionService();
   final SupabaseService _supabaseService = SupabaseService();
-  final DatabaseService _databaseService = DatabaseService();
   final AuthService _authService = AuthService();
 
   List<Question> _questions = [];
@@ -45,7 +36,9 @@ class _PatientAssessmentScreenState extends State<PatientAssessmentScreen> {
     try {
       // Load questions from the selected assessment template
       if (SupabaseService.isAvailable) {
-        final template = await _supabaseService.getTemplateWithQuestions(widget.templateId);
+        final template = await _supabaseService.getTemplateWithQuestions(
+          widget.templateId,
+        );
         if (template != null && template.questions != null) {
           setState(() {
             _questions = template.questions!;
@@ -56,7 +49,9 @@ class _PatientAssessmentScreenState extends State<PatientAssessmentScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Assessment template not found or has no questions.'),
+                content: Text(
+                  'Assessment template not found or has no questions.',
+                ),
                 backgroundColor: AppTheme.errorRed,
               ),
             );
@@ -68,7 +63,9 @@ class _PatientAssessmentScreenState extends State<PatientAssessmentScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Unable to connect to server. Please try again later.'),
+              content: Text(
+                'Unable to connect to server. Please try again later.',
+              ),
               backgroundColor: AppTheme.errorRed,
             ),
           );
@@ -77,9 +74,9 @@ class _PatientAssessmentScreenState extends State<PatientAssessmentScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading questions: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading questions: $e')));
       }
     }
   }
@@ -87,21 +84,23 @@ class _PatientAssessmentScreenState extends State<PatientAssessmentScreen> {
   void _nextPage() {
     // Validate current question before moving forward
     final currentQuestion = _questions[_currentPage];
-    
+
     // Check if required question is answered
     if (currentQuestion.required) {
       final response = _responses[currentQuestion.questionId];
       if (response == null || response.toString().isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please answer this required question before continuing.'),
+            content: Text(
+              'Please answer this required question before continuing.',
+            ),
             backgroundColor: AppTheme.errorRed,
           ),
         );
         return;
       }
     }
-    
+
     // Save response and move to next page
     if (_currentPage < _questions.length - 1) {
       _pageController.nextPage(
@@ -110,11 +109,11 @@ class _PatientAssessmentScreenState extends State<PatientAssessmentScreen> {
       );
     }
   }
-  
+
   void _handleNextOrSubmit() {
     // Validate current question
     final currentQuestion = _questions[_currentPage];
-    
+
     if (currentQuestion.required) {
       final response = _responses[currentQuestion.questionId];
       if (response == null || response.toString().isEmpty) {
@@ -127,7 +126,7 @@ class _PatientAssessmentScreenState extends State<PatientAssessmentScreen> {
         return;
       }
     }
-    
+
     // If last question, submit; otherwise, go to next
     if (_currentPage == _questions.length - 1) {
       _submitAssessment();
@@ -174,18 +173,22 @@ class _PatientAssessmentScreenState extends State<PatientAssessmentScreen> {
             );
           }
         }
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Assessment submitted successfully! A healthcare professional will review it.'),
+              content: Text(
+                'Assessment submitted successfully! A healthcare professional will review it.',
+              ),
               backgroundColor: AppTheme.accentGreen,
             ),
           );
           Navigator.pop(context, true);
         }
       } else {
-        throw Exception('Unable to connect to server. Please check your internet connection.');
+        throw Exception(
+          'Unable to connect to server. Please check your internet connection.',
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -216,15 +219,15 @@ class _PatientAssessmentScreenState extends State<PatientAssessmentScreen> {
       return Scaffold(
         appBar: AppBar(title: const Text('Assessment')),
         body: const Center(
-          child: Text('No questions available. Please contact an administrator.'),
+          child: Text(
+            'No questions available. Please contact an administrator.',
+          ),
         ),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mental Capacity Assessment'),
-      ),
+      appBar: AppBar(title: const Text('Mental Capacity Assessment')),
       body: Form(
         key: _formKey,
         child: Column(
@@ -249,7 +252,8 @@ class _PatientAssessmentScreenState extends State<PatientAssessmentScreen> {
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
-                physics: const NeverScrollableScrollPhysics(), // Disable swipe - only button navigation
+                physics:
+                    const NeverScrollableScrollPhysics(), // Disable swipe - only button navigation
                 onPageChanged: (page) => setState(() => _currentPage = page),
                 itemCount: _questions.length,
                 itemBuilder: (context, index) {
@@ -278,10 +282,10 @@ class _PatientAssessmentScreenState extends State<PatientAssessmentScreen> {
                     )
                   else
                     const SizedBox(),
-                  
+
                   // Spacing between buttons
                   if (_currentPage > 0) const SizedBox(width: 16),
-                  
+
                   // Next or Submit button
                   Expanded(
                     flex: _currentPage > 0 ? 1 : 2,
@@ -300,7 +304,9 @@ class _PatientAssessmentScreenState extends State<PatientAssessmentScreen> {
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
                               ),
                             )
                           : Text(
@@ -333,7 +339,7 @@ class _PatientAssessmentScreenState extends State<PatientAssessmentScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppTheme.primaryBlue.withOpacity(0.1),
+                color: AppTheme.primaryBlue.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -346,10 +352,7 @@ class _PatientAssessmentScreenState extends State<PatientAssessmentScreen> {
             ),
             const SizedBox(height: 16),
           ],
-          Text(
-            question.text,
-            style: AppTheme.headingSmall,
-          ),
+          Text(question.text, style: AppTheme.headingSmall),
           if (question.required)
             Text(
               ' *',
@@ -365,51 +368,41 @@ class _PatientAssessmentScreenState extends State<PatientAssessmentScreen> {
   Widget _buildQuestionInput(Question question) {
     switch (question.type) {
       case QuestionType.yesNo:
-        return Column(
-          children: [
-            RadioListTile<String>(
-              title: const Text('Yes'),
-              value: 'Yes',
-              groupValue: _responses[question.questionId]?.toString(),
-              onChanged: (value) {
-                setState(() => _responses[question.questionId] = value);
-              },
-            ),
-            RadioListTile<String>(
-              title: const Text('No'),
-              value: 'No',
-              groupValue: _responses[question.questionId]?.toString(),
-              onChanged: (value) {
-                setState(() => _responses[question.questionId] = value);
-              },
-            ),
-          ],
+        return RadioGroup<String>(
+          groupValue: _responses[question.questionId]?.toString(),
+          onChanged: (value) {
+            setState(() => _responses[question.questionId] = value);
+          },
+          child: const Column(
+            children: [
+              RadioListTile<String>(title: Text('Yes'), value: 'Yes'),
+              RadioListTile<String>(title: Text('No'), value: 'No'),
+            ],
+          ),
         );
       case QuestionType.multipleChoice:
-        return Column(
-          children: question.options!.map((option) {
-            return RadioListTile<String>(
-              title: Text(option),
-              value: option,
-              groupValue: _responses[question.questionId]?.toString(),
-              onChanged: (value) {
-                setState(() => _responses[question.questionId] = value);
-              },
-            );
-          }).toList(),
+        return RadioGroup<String>(
+          groupValue: _responses[question.questionId]?.toString(),
+          onChanged: (value) {
+            setState(() => _responses[question.questionId] = value);
+          },
+          child: Column(
+            children: question.options!.map((option) {
+              return RadioListTile<String>(title: Text(option), value: option);
+            }).toList(),
+          ),
         );
       case QuestionType.scale:
-        return Column(
-          children: question.options!.map((option) {
-            return RadioListTile<String>(
-              title: Text(option),
-              value: option,
-              groupValue: _responses[question.questionId]?.toString(),
-              onChanged: (value) {
-                setState(() => _responses[question.questionId] = value);
-              },
-            );
-          }).toList(),
+        return RadioGroup<String>(
+          groupValue: _responses[question.questionId]?.toString(),
+          onChanged: (value) {
+            setState(() => _responses[question.questionId] = value);
+          },
+          child: Column(
+            children: question.options!.map((option) {
+              return RadioListTile<String>(title: Text(option), value: option);
+            }).toList(),
+          ),
         );
       case QuestionType.textInput:
         return TextFormField(
@@ -441,4 +434,3 @@ class _PatientAssessmentScreenState extends State<PatientAssessmentScreen> {
     super.dispose();
   }
 }
-

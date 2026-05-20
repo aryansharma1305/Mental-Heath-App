@@ -63,10 +63,7 @@ class QuestionService {
     final db = await _databaseService.database;
     return await db.update(
       'questions',
-      {
-        'is_active': 0,
-        'updated_at': DateTime.now().toIso8601String(),
-      },
+      {'is_active': 0, 'updated_at': DateTime.now().toIso8601String()},
       where: 'id = ?',
       whereArgs: [id],
     );
@@ -76,19 +73,16 @@ class QuestionService {
   Future<void> reorderQuestions(List<int> questionIds) async {
     final db = await _databaseService.database;
     final batch = db.batch();
-    
+
     for (int i = 0; i < questionIds.length; i++) {
       batch.update(
         'questions',
-        {
-          'order_index': i,
-          'updated_at': DateTime.now().toIso8601String(),
-        },
+        {'order_index': i, 'updated_at': DateTime.now().toIso8601String()},
         where: 'id = ?',
         whereArgs: [questionIds[i]],
       );
     }
-    
+
     await batch.commit(noResult: true);
   }
 
@@ -158,4 +152,3 @@ class QuestionService {
     }
   }
 }
-
