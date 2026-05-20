@@ -49,35 +49,36 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text,
       );
 
-      if (mounted) {
-        if (result['success'] == true) {
-          // Store remember me preference
-          if (_rememberMe) {
-            final prefs = await SharedPreferences.getInstance();
-            await prefs.setBool('remember_me', true);
-          }
+      if (!mounted) return;
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['message'] ?? 'Login successful'),
-              backgroundColor: AppTheme.accentGreen,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['message'] ?? 'Login failed'),
-              backgroundColor: AppTheme.errorRed,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+      if (result['success'] == true) {
+        // Store remember me preference
+        if (_rememberMe) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('remember_me', true);
+          if (!mounted) return;
         }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Login successful'),
+            backgroundColor: AppTheme.accentGreen,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Login failed'),
+            backgroundColor: AppTheme.errorRed,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -103,10 +104,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final isSmallScreen = screenWidth < 400;
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
+      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
       extendBodyBehindAppBar: true,
       body: Container(
         decoration: BoxDecoration(
@@ -116,7 +114,7 @@ class _LoginScreenState extends State<LoginScreen> {
             colors: [
               AppTheme.primaryBlue,
               AppTheme.lightBlue,
-              AppTheme.lightBlue.withOpacity(0.8),
+              AppTheme.lightBlue.withValues(alpha: 0.8),
             ],
             stops: const [0.0, 0.5, 1.0],
           ),
@@ -126,40 +124,48 @@ class _LoginScreenState extends State<LoginScreen> {
             padding: EdgeInsets.all(isSmallScreen ? 16.0 : 24.0),
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                minHeight: screenHeight - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom,
+                minHeight:
+                    screenHeight -
+                    MediaQuery.of(context).padding.top -
+                    MediaQuery.of(context).padding.bottom,
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const SizedBox(height: 20),
-                  
+
                   // Logo and Title Section
                   Container(
-                    width: isSmallScreen ? 90 : 120,
-                    height: isSmallScreen ? 90 : 120,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(30),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
+                        width: isSmallScreen ? 90 : 120,
+                        height: isSmallScreen ? 90 : 120,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(30),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.2),
+                              blurRadius: 20,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.psychology,
-                      size: 60,
-                      color: AppTheme.primaryBlue,
-                    ),
-                  ).animate()
-                      .scale(delay: 200.ms, duration: 600.ms, curve: Curves.elasticOut)
+                        child: const Icon(
+                          Icons.psychology,
+                          size: 60,
+                          color: AppTheme.primaryBlue,
+                        ),
+                      )
+                      .animate()
+                      .scale(
+                        delay: 200.ms,
+                        duration: 600.ms,
+                        curve: Curves.elasticOut,
+                      )
                       .then()
                       .shake(duration: 400.ms),
-                  
+
                   const SizedBox(height: 32),
-                  
+
                   Text(
                     'MindCare',
                     style: GoogleFonts.poppins(
@@ -169,22 +175,22 @@ class _LoginScreenState extends State<LoginScreen> {
                       letterSpacing: 1.2,
                     ),
                   ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.3),
-                  
+
                   const SizedBox(height: 12),
-                  
+
                   Text(
                     'Healthcare Professional Portal',
                     style: GoogleFonts.inter(
                       fontSize: isSmallScreen ? 15 : 17,
-                      color: Colors.white.withOpacity(0.95),
+                      color: Colors.white.withValues(alpha: 0.95),
                       fontWeight: FontWeight.w400,
                       letterSpacing: 0.5,
                     ),
                     textAlign: TextAlign.center,
                   ).animate().fadeIn(delay: 600.ms),
-                  
+
                   const SizedBox(height: 50),
-                  
+
                   // Login Form
                   CustomCard(
                     margin: EdgeInsets.zero,
@@ -200,9 +206,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          
+
                           const SizedBox(height: 8),
-                          
+
                           Text(
                             'Sign in to continue',
                             style: AppTheme.bodyMedium.copyWith(
@@ -210,9 +216,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          
+
                           const SizedBox(height: 32),
-                          
+
                           // Username Field
                           CustomInputField(
                             label: 'Username / Staff ID',
@@ -230,9 +236,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               return null;
                             },
                           ),
-                          
+
                           const SizedBox(height: 20),
-                          
+
                           // Password Field
                           CustomInputField(
                             label: 'Password',
@@ -244,7 +250,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ? Icons.visibility_outlined
                                 : Icons.visibility_off_outlined,
                             onSuffixTap: () {
-                              setState(() => _obscurePassword = !_obscurePassword);
+                              setState(
+                                () => _obscurePassword = !_obscurePassword,
+                              );
                             },
                             validator: (value) {
                               if (value == null || value.isEmpty) {
@@ -253,9 +261,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               return null;
                             },
                           ),
-                          
+
                           const SizedBox(height: 16),
-                          
+
                           // Remember Me & Forgot Password
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -265,7 +273,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                   Checkbox(
                                     value: _rememberMe,
                                     onChanged: (value) {
-                                      setState(() => _rememberMe = value ?? false);
+                                      setState(
+                                        () => _rememberMe = value ?? false,
+                                      );
                                     },
                                     activeColor: AppTheme.primaryBlue,
                                   ),
@@ -282,7 +292,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                     context: context,
                                     builder: (ctx) => AlertDialog(
                                       title: const Text('Password Reset'),
-                                      content: const Text('Please contact your system administrator to reset your password.'),
+                                      content: const Text(
+                                        'Please contact your system administrator to reset your password.',
+                                      ),
                                       actions: [
                                         TextButton(
                                           onPressed: () => Navigator.pop(ctx),
@@ -302,9 +314,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ],
                           ),
-                          
+
                           const SizedBox(height: 32),
-                          
+
                           // Login Button
                           CustomButton(
                             text: 'Sign In',
@@ -312,15 +324,17 @@ class _LoginScreenState extends State<LoginScreen> {
                             isLoading: _isLoading,
                             icon: Icons.login_rounded,
                           ),
-                          
+
                           const SizedBox(height: 24),
-                          
+
                           // Divider
                           Row(
                             children: [
                               Expanded(child: Divider(color: Colors.grey[300])),
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                ),
                                 child: Text(
                                   'OR',
                                   style: AppTheme.bodySmall.copyWith(
@@ -331,9 +345,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               Expanded(child: Divider(color: Colors.grey[300])),
                             ],
                           ),
-                          
+
                           const SizedBox(height: 24),
-                          
+
                           // Register Link
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -347,7 +361,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => const RegisterScreen(),
+                                      builder: (context) =>
+                                          const RegisterScreen(),
                                     ),
                                   );
                                 },
@@ -361,9 +376,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ],
                           ),
-                          
+
                           const SizedBox(height: 16),
-                          
+
                           // Security Notice
                           Container(
                             padding: const EdgeInsets.all(16),
@@ -371,7 +386,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               color: Colors.blue[50],
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: AppTheme.primaryBlue.withOpacity(0.2),
+                                color: AppTheme.primaryBlue.withValues(
+                                  alpha: 0.2,
+                                ),
                               ),
                             ),
                             child: Row(
@@ -398,19 +415,19 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ).animate().slideY(delay: 800.ms, begin: 0.3).fadeIn(delay: 800.ms),
-                  
+
                   const SizedBox(height: 32),
-                  
+
                   // Footer
                   Text(
                     '© 2025 MindCare Healthcare Solutions',
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                       fontWeight: FontWeight.w300,
                     ),
                   ).animate().fadeIn(delay: 1000.ms),
-                  
+
                   const SizedBox(height: 20),
                 ],
               ),

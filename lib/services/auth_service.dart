@@ -13,10 +13,14 @@ import 'database_service.dart';
 
 // Helper for secure storage with macOS fallback
 class _SecureStorageHelper {
-  static final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  static final FlutterSecureStorage _secureStorage =
+      const FlutterSecureStorage();
   static bool _useFallback = false;
-  
-  static Future<void> write({required String key, required String value}) async {
+
+  static Future<void> write({
+    required String key,
+    required String value,
+  }) async {
     if (_useFallback || Platform.isMacOS) {
       // Use SharedPreferences on macOS as fallback
       try {
@@ -36,7 +40,7 @@ class _SecureStorageHelper {
       await prefs.setString('_secure_$key', value);
     }
   }
-  
+
   static Future<String?> read({required String key}) async {
     if (_useFallback || Platform.isMacOS) {
       try {
@@ -55,7 +59,7 @@ class _SecureStorageHelper {
       return prefs.getString('_secure_$key');
     }
   }
-  
+
   static Future<void> delete({required String key}) async {
     if (_useFallback || Platform.isMacOS) {
       try {
@@ -81,7 +85,7 @@ class AuthService {
   factory AuthService() => _instance;
   AuthService._internal();
   final SupabaseService _supabaseService = SupabaseService();
-  
+
   String? _currentToken;
   Map<String, dynamic>? _currentUser;
   app_models.User? _currentUserModel;
@@ -119,10 +123,10 @@ class AuthService {
     // Try Supabase first
     try {
       final hashedPassword = _hashPassword(password);
-      
+
       // Get user from Supabase
       final user = await _supabaseService.getUserByUsername(username);
-      
+
       if (user != null) {
         // Verify password - check local database for password hash
         final storedHash = await _databaseService.getPasswordHash(username);
@@ -131,14 +135,14 @@ class AuthService {
           // Generate token
           final token = _generateLocalToken(username);
           await _SecureStorageHelper.write(key: 'auth_token', value: token);
-          
+
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('username', user.username);
           await prefs.setString('full_name', user.fullName);
           await prefs.setString('role', user.role.name);
           await prefs.setString('department', user.department ?? '');
           await prefs.setString('user_id', user.id);
-          
+
           _currentToken = token;
           _currentUser = {
             'username': user.username,
@@ -148,7 +152,7 @@ class AuthService {
             'id': user.id,
           };
           _currentUserModel = user;
-          
+
           return {
             'success': true,
             'message': 'Login successful',
@@ -176,10 +180,7 @@ class AuthService {
     // Validate password strength
     final passwordValidation = _validatePassword(password);
     if (!passwordValidation['valid']) {
-      return {
-        'success': false,
-        'message': passwordValidation['message'],
-      };
+      return {'success': false, 'message': passwordValidation['message']};
     }
 
     // Hash password
@@ -188,7 +189,9 @@ class AuthService {
     // Parse role
     UserRole userRole;
     try {
-      userRole = UserRole.values.firstWhere((r) => r.name == role.toLowerCase());
+      userRole = UserRole.values.firstWhere(
+        (r) => r.name == role.toLowerCase(),
+      );
     } catch (e) {
       userRole = UserRole.patient; // Default to patient
     }
@@ -199,10 +202,7 @@ class AuthService {
         // Check if user already exists in Supabase
         final existingUser = await _supabaseService.getUserByUsername(username);
         if (existingUser != null) {
-          return {
-            'success': false,
-            'message': 'Username already exists',
-          };
+          return {'success': false, 'message': 'Username already exists'};
         }
 
         // Create user in Supabase
@@ -274,7 +274,8 @@ class AuthService {
     final storedUsername = prefs.getString('username');
     final storedPassword = prefs.getString('password_hash');
 
-    if (storedUsername == username && storedPassword == _hashPassword(password)) {
+    if (storedUsername == username &&
+        storedPassword == _hashPassword(password)) {
       // Generate a simple token for local use
       final token = _generateLocalToken(username);
       await _SecureStorageHelper.write(key: 'auth_token', value: token);
@@ -293,10 +294,7 @@ class AuthService {
       };
     }
 
-    return {
-      'success': false,
-      'message': 'Invalid credentials',
-    };
+    return {'success': false, 'message': 'Invalid credentials'};
   }
 
   // Local register fallback
@@ -311,16 +309,15 @@ class AuthService {
     // Check if username already exists in database
     final existingUser = await _databaseService.getUserByUsername(username);
     if (existingUser != null) {
-      return {
-        'success': false,
-        'message': 'Username already exists',
-      };
+      return {'success': false, 'message': 'Username already exists'};
     }
 
     // Parse role
     UserRole userRole;
     try {
-      userRole = UserRole.values.firstWhere((r) => r.name == role.toLowerCase());
+      userRole = UserRole.values.firstWhere(
+        (r) => r.name == role.toLowerCase(),
+      );
     } catch (e) {
       userRole = UserRole.patient; // Default to patient
     }
@@ -375,12 +372,12 @@ class AuthService {
     try {
       await _SecureStorageHelper.delete(key: 'auth_token');
       await _SecureStorageHelper.delete(key: 'refresh_token');
-      
+
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('username');
       await prefs.remove('email');
       await prefs.remove('password_hash');
-      
+
       _currentToken = null;
       _currentUser = null;
     } catch (e) {
@@ -391,7 +388,9 @@ class AuthService {
   // Refresh token
   Future<bool> refreshToken() async {
     try {
-      final refreshToken = await _SecureStorageHelper.read(key: 'refresh_token');
+      final refreshToken = await _SecureStorageHelper.read(
+        key: 'refresh_token',
+      );
       if (refreshToken == null) return false;
 
       // For now, just regenerate token if not expired
@@ -399,7 +398,7 @@ class AuthService {
       if (token != null && !JwtDecoder.isExpired(token)) {
         return true;
       }
-      
+
       // Token expired, need to re-login
       return false;
     } catch (e) {
@@ -459,7 +458,11 @@ class AuthService {
     final payload = {
       'username': username,
       'iat': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      'exp': (DateTime.now().add(const Duration(days: 30)).millisecondsSinceEpoch ~/ 1000),
+      'exp':
+          (DateTime.now()
+              .add(const Duration(days: 30))
+              .millisecondsSinceEpoch ~/
+          1000),
     };
     return base64Encode(utf8.encode(jsonEncode(payload)));
   }
@@ -519,4 +522,3 @@ class AuthService {
     return prefs.getString('user_id');
   }
 }
-

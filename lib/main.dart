@@ -13,111 +13,117 @@ import 'services/language_service.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
-  runZonedGuarded(() async {
-    print('🚀🚀🚀 APP STARTING - DEBUG MODE 🚀🚀🚀');
-    WidgetsFlutterBinding.ensureInitialized();
-    print('✅ WidgetsFlutterBinding initialized');
-  
-  // Load environment variables (optional - for future Supabase sync)
-  String supabaseUrl = 'https://uikkanfplfjglehpfrwu.supabase.co';
-  String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpa2thbmZwbGZqZ2xlaHBmcnd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5ODQ1NDksImV4cCI6MjA4MTU2MDU0OX0.SCtZgXvtFfla5rvadCxHi2OLbLADNduiYA-Qu3Dav1M';
-  
-  try {
-    await dotenv.load(fileName: ".env");
-    supabaseUrl = dotenv.env['SUPABASE_URL'] ?? supabaseUrl;
-    supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? supabaseAnonKey;
-  } catch (e) {
-    debugPrint('⚠️ .env file not found, using defaults');
-  }
-  
-  // Initialize Supabase (for future sync - currently using local storage)
-  try {
-    // Validate key format before initialization
-    final isValidKeyFormat = supabaseAnonKey.startsWith('eyJ');
-    if (!isValidKeyFormat) {
-      debugPrint('═══════════════════════════════════════');
-      debugPrint('⚠️ SUPABASE KEY FORMAT WARNING');
-      debugPrint('═══════════════════════════════════════');
-      debugPrint('Current key starts with: ${supabaseAnonKey.substring(0, 15)}...');
-      debugPrint('Expected format: JWT starting with "eyJ..."');
-      debugPrint('');
-      debugPrint('To fix this:');
-      debugPrint('1. Go to https://supabase.com/dashboard');
-      debugPrint('2. Select your project');
-      debugPrint('3. Go to Settings → API');
-      debugPrint('4. Copy the "anon" public key');
-      debugPrint('5. Update SUPABASE_ANON_KEY in .env file');
-      debugPrint('═══════════════════════════════════════');
-    }
-    
-    await Supabase.initialize(
-      url: supabaseUrl,
-      anonKey: supabaseAnonKey,
-    );
-    
-    // Verify connection by checking if client is accessible
-    final isConnected = Supabase.instance.isInitialized;
-    if (isConnected) {
-      debugPrint('✅ Supabase initialized successfully');
-      debugPrint('   URL: $supabaseUrl');
-      debugPrint('   Key format valid: $isValidKeyFormat');
-    } else {
-      debugPrint('⚠️ Supabase initialized but client not ready');
-    }
-  } catch (e) {
-    debugPrint('═══════════════════════════════════════');
-    debugPrint('❌ SUPABASE INITIALIZATION FAILED');
-    debugPrint('═══════════════════════════════════════');
-    debugPrint('Error: $e');
-    debugPrint('📱 App will continue with local SQLite database');
-    debugPrint('═══════════════════════════════════════');
-  }
-  
-  // Set system UI overlay style
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: Colors.white,
-      systemNavigationBarIconBrightness: Brightness.dark,
-    ),
-  );
-  
-  // Set preferred orientations
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
-  
-  // Trigger background sync
-  try {
-    DatabaseService().syncPendingAssessments();
-  } catch (e) {
-    debugPrint('Background sync initialization failed: $e');
-  }
+  runZonedGuarded(
+    () async {
+      debugPrint('APP STARTING');
+      WidgetsFlutterBinding.ensureInitialized();
+      debugPrint('WidgetsFlutterBinding initialized');
 
-    print('🚀 runApp called');
-    
-    runApp(const MentalCapacityAssessmentApp());
-  }, (error, stack) {
-    print('❌❌❌ UNCAUGHT ERROR: $error');
-    print(stack);
-  });
+      // Load environment variables (optional - for future Supabase sync)
+      String supabaseUrl = 'https://uikkanfplfjglehpfrwu.supabase.co';
+      String supabaseAnonKey =
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpa2thbmZwbGZqZ2xlaHBmcnd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5ODQ1NDksImV4cCI6MjA4MTU2MDU0OX0.SCtZgXvtFfla5rvadCxHi2OLbLADNduiYA-Qu3Dav1M';
+
+      try {
+        await dotenv.load(fileName: ".env");
+        supabaseUrl = dotenv.env['SUPABASE_URL'] ?? supabaseUrl;
+        supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? supabaseAnonKey;
+      } catch (e) {
+        debugPrint('⚠️ .env file not found, using defaults');
+      }
+
+      // Initialize Supabase (for future sync - currently using local storage)
+      try {
+        // Validate key format before initialization
+        final isValidKeyFormat = supabaseAnonKey.startsWith('eyJ');
+        if (!isValidKeyFormat) {
+          debugPrint('═══════════════════════════════════════');
+          debugPrint('⚠️ SUPABASE KEY FORMAT WARNING');
+          debugPrint('═══════════════════════════════════════');
+          debugPrint(
+            'Current key starts with: ${supabaseAnonKey.substring(0, 15)}...',
+          );
+          debugPrint('Expected format: JWT starting with "eyJ..."');
+          debugPrint('');
+          debugPrint('To fix this:');
+          debugPrint('1. Go to https://supabase.com/dashboard');
+          debugPrint('2. Select your project');
+          debugPrint('3. Go to Settings → API');
+          debugPrint('4. Copy the "anon" public key');
+          debugPrint('5. Update SUPABASE_ANON_KEY in .env file');
+          debugPrint('═══════════════════════════════════════');
+        }
+
+        await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
+
+        // Verify connection by checking if client is accessible
+        final isConnected = Supabase.instance.isInitialized;
+        if (isConnected) {
+          debugPrint('✅ Supabase initialized successfully');
+          debugPrint('   URL: $supabaseUrl');
+          debugPrint('   Key format valid: $isValidKeyFormat');
+        } else {
+          debugPrint('⚠️ Supabase initialized but client not ready');
+        }
+      } catch (e) {
+        debugPrint('═══════════════════════════════════════');
+        debugPrint('❌ SUPABASE INITIALIZATION FAILED');
+        debugPrint('═══════════════════════════════════════');
+        debugPrint('Error: $e');
+        debugPrint('📱 App will continue with local SQLite database');
+        debugPrint('═══════════════════════════════════════');
+      }
+
+      // Set system UI overlay style
+      SystemChrome.setSystemUIOverlayStyle(
+        const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          systemNavigationBarColor: Colors.white,
+          systemNavigationBarIconBrightness: Brightness.dark,
+        ),
+      );
+
+      // Set preferred orientations
+      await SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ]);
+
+      // Trigger background sync
+      try {
+        DatabaseService().syncPendingAssessments();
+      } catch (e) {
+        debugPrint('Background sync initialization failed: $e');
+      }
+
+      debugPrint('runApp called');
+
+      runApp(const MentalCapacityAssessmentApp());
+    },
+    (error, stack) {
+      debugPrint('UNCAUGHT ERROR: $error');
+      debugPrintStack(stackTrace: stack);
+    },
+  );
 }
 
 class MentalCapacityAssessmentApp extends StatefulWidget {
   const MentalCapacityAssessmentApp({super.key});
 
   static void setLocale(BuildContext context, Locale newLocale) {
-    _MentalCapacityAssessmentAppState? state = context.findAncestorStateOfType<_MentalCapacityAssessmentAppState>();
+    _MentalCapacityAssessmentAppState? state = context
+        .findAncestorStateOfType<_MentalCapacityAssessmentAppState>();
     state?.setLocale(newLocale);
   }
 
   @override
-  State<MentalCapacityAssessmentApp> createState() => _MentalCapacityAssessmentAppState();
+  State<MentalCapacityAssessmentApp> createState() =>
+      _MentalCapacityAssessmentAppState();
 }
 
-class _MentalCapacityAssessmentAppState extends State<MentalCapacityAssessmentApp> {
+class _MentalCapacityAssessmentAppState
+    extends State<MentalCapacityAssessmentApp> {
   Locale? _locale;
 
   @override
@@ -166,10 +172,9 @@ class _MentalCapacityAssessmentAppState extends State<MentalCapacityAssessmentAp
       builder: (context, child) {
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
-            textScaler: MediaQuery.of(context).textScaler.clamp(
-              minScaleFactor: 0.8,
-              maxScaleFactor: 1.2,
-            ),
+            textScaler: MediaQuery.of(
+              context,
+            ).textScaler.clamp(minScaleFactor: 0.8, maxScaleFactor: 1.2),
           ),
           child: child!,
         );

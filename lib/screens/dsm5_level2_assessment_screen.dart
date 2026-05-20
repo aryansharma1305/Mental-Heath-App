@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'dart:convert';
 import '../services/dsm5_level2_questions.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
@@ -29,8 +28,7 @@ class DSM5Level2AssessmentScreen extends StatefulWidget {
       _DSM5Level2AssessmentScreenState();
 }
 
-class _DSM5Level2AssessmentScreenState
-    extends State<DSM5Level2AssessmentScreen>
+class _DSM5Level2AssessmentScreenState extends State<DSM5Level2AssessmentScreen>
     with SingleTickerProviderStateMixin {
   final PageController _pageController = PageController();
   final AuthService _authService = AuthService();
@@ -56,7 +54,9 @@ class _DSM5Level2AssessmentScreenState
       duration: const Duration(milliseconds: 600),
       vsync: this,
     );
-    _domains = DSM5Level2Questions.getDomainsForFlagged(widget.flaggedLevel1Domains);
+    _domains = DSM5Level2Questions.getDomainsForFlagged(
+      widget.flaggedLevel1Domains,
+    );
     _animController.forward();
   }
 
@@ -95,7 +95,10 @@ class _DSM5Level2AssessmentScreenState
 
   void _nextQuestion() {
     if (!_hasAnsweredCurrent) {
-      _showSnack('Please select a response before continuing.', AppTheme.warningOrange);
+      _showSnack(
+        'Please select a response before continuing.',
+        AppTheme.warningOrange,
+      );
       return;
     }
     if (_currentQuestionIndex < _totalQuestions - 1) {
@@ -161,7 +164,10 @@ class _DSM5Level2AssessmentScreenState
 
       // Build a readable summary from all Level 2 results
       final resultSummary = _completedResults
-          .map((r) => '${r.domainTitle}: ${r.severity} (${r.rawScore}/${r.maxScore})')
+          .map(
+            (r) =>
+                '${r.domainTitle}: ${r.severity} (${r.rawScore}/${r.maxScore})',
+          )
           .join(' | ');
 
       final responseMap = <String, dynamic>{};
@@ -208,9 +214,9 @@ class _DSM5Level2AssessmentScreenState
   // ──────────────────────────────────────────────
 
   void _showSnack(String msg, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: color),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: color));
   }
 
   void _showFinalSummarySheet() {
@@ -246,7 +252,9 @@ class _DSM5Level2AssessmentScreenState
       backgroundColor: AppTheme.backgroundColor,
       appBar: _buildAppBar(),
       body: SafeArea(
-        child: _domainComplete ? _buildDomainResultView() : _buildQuestionView(),
+        child: _domainComplete
+            ? _buildDomainResultView()
+            : _buildQuestionView(),
       ),
     );
   }
@@ -263,7 +271,11 @@ class _DSM5Level2AssessmentScreenState
             borderRadius: BorderRadius.circular(12),
             boxShadow: AppTheme.softShadow,
           ),
-          child: const Icon(Icons.arrow_back, color: AppTheme.textDark, size: 20),
+          child: const Icon(
+            Icons.arrow_back,
+            color: AppTheme.textDark,
+            size: 20,
+          ),
         ),
         onPressed: () => _showExitConfirm(),
       ),
@@ -292,7 +304,10 @@ class _DSM5Level2AssessmentScreenState
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Exit Level 2?', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+        title: Text(
+          'Exit Level 2?',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+        ),
         content: Text(
           'Progress in the current Level 2 domain will be lost.',
           style: GoogleFonts.inter(color: AppTheme.textMedium),
@@ -334,7 +349,8 @@ class _DSM5Level2AssessmentScreenState
             physics: const NeverScrollableScrollPhysics(),
             onPageChanged: (i) => setState(() => _currentQuestionIndex = i),
             itemCount: domain.questions.length,
-            itemBuilder: (_, i) => _buildQuestionCard(domain, domain.questions[i]),
+            itemBuilder: (_, i) =>
+                _buildQuestionCard(domain, domain.questions[i]),
           ),
         ),
 
@@ -356,7 +372,10 @@ class _DSM5Level2AssessmentScreenState
             children: [
               Text(
                 'Overall Progress',
-                style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textGrey),
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: AppTheme.textGrey,
+                ),
               ),
               Text(
                 '${(_overallProgress * 100).toInt()}%',
@@ -385,9 +404,12 @@ class _DSM5Level2AssessmentScreenState
             children: [
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF667eea).withOpacity(0.1),
+                    color: const Color(0xFF667eea).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -404,9 +426,12 @@ class _DSM5Level2AssessmentScreenState
               ),
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
-                  color: AppTheme.textDark.withOpacity(0.07),
+                  color: AppTheme.textDark.withValues(alpha: 0.07),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -435,9 +460,11 @@ class _DSM5Level2AssessmentScreenState
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppTheme.skyBlue.withOpacity(0.7),
+              color: AppTheme.skyBlue.withValues(alpha: 0.7),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppTheme.infoBlue.withOpacity(0.3)),
+              border: Border.all(
+                color: AppTheme.infoBlue.withValues(alpha: 0.3),
+              ),
             ),
             child: Row(
               children: [
@@ -446,7 +473,10 @@ class _DSM5Level2AssessmentScreenState
                 Expanded(
                   child: Text(
                     domain.scoringNote,
-                    style: GoogleFonts.inter(fontSize: 10, color: AppTheme.textMedium),
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      color: AppTheme.textMedium,
+                    ),
                   ),
                 ),
               ],
@@ -495,19 +525,31 @@ class _DSM5Level2AssessmentScreenState
             return Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: GestureDetector(
-                onTap: () => setState(() => _currentResponses[question.id] = optIndex),
+                onTap: () =>
+                    setState(() => _currentResponses[question.id] = optIndex),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 180),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
                   decoration: BoxDecoration(
-                    color: isSelected ? color.withOpacity(0.12) : Colors.white,
+                    color: isSelected
+                        ? color.withValues(alpha: 0.12)
+                        : Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: isSelected ? color : AppTheme.dividerColor,
                       width: isSelected ? 2 : 1,
                     ),
                     boxShadow: isSelected
-                        ? [BoxShadow(color: color.withOpacity(0.18), blurRadius: 8, offset: const Offset(0, 2))]
+                        ? [
+                            BoxShadow(
+                              color: color.withValues(alpha: 0.18),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
                         : [],
                   ),
                   child: Row(
@@ -516,7 +558,9 @@ class _DSM5Level2AssessmentScreenState
                         width: 32,
                         height: 32,
                         decoration: BoxDecoration(
-                          color: isSelected ? color : color.withOpacity(0.18),
+                          color: isSelected
+                              ? color
+                              : color.withValues(alpha: 0.18),
                           shape: BoxShape.circle,
                         ),
                         child: Center(
@@ -536,8 +580,12 @@ class _DSM5Level2AssessmentScreenState
                           label,
                           style: GoogleFonts.inter(
                             fontSize: 13,
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                            color: isSelected ? AppTheme.textDark : AppTheme.textMedium,
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                            color: isSelected
+                                ? AppTheme.textDark
+                                : AppTheme.textMedium,
                           ),
                         ),
                       ),
@@ -574,7 +622,13 @@ class _DSM5Level2AssessmentScreenState
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -4))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -4),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -587,7 +641,9 @@ class _DSM5Level2AssessmentScreenState
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   side: BorderSide(color: AppTheme.dividerColor, width: 2),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
               ),
             ),
@@ -596,14 +652,25 @@ class _DSM5Level2AssessmentScreenState
             child: ElevatedButton.icon(
               onPressed: _isSubmitting ? null : _nextQuestion,
               icon: _isSubmitting
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
                   : Icon(isLast ? Icons.check : Icons.arrow_forward, size: 16),
               label: Text(isLast ? 'Submit Domain' : 'Next'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: isLast ? AppTheme.successGreen : AppTheme.textDark,
+                backgroundColor: isLast
+                    ? AppTheme.successGreen
+                    : AppTheme.textDark,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
             ),
           ),
@@ -631,7 +698,7 @@ class _DSM5Level2AssessmentScreenState
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [severityColor, severityColor.withOpacity(0.7)],
+                colors: [severityColor, severityColor.withValues(alpha: 0.7)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -643,11 +710,13 @@ class _DSM5Level2AssessmentScreenState
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.25),
+                    color: Colors.white.withValues(alpha: 0.25),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    result.requiresAction ? Icons.warning_rounded : Icons.check_circle_rounded,
+                    result.requiresAction
+                        ? Icons.warning_rounded
+                        : Icons.check_circle_rounded,
                     color: Colors.white,
                     size: 36,
                   ),
@@ -671,7 +740,10 @@ class _DSM5Level2AssessmentScreenState
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _scorePill('Score', '${result.rawScore} / ${result.maxScore}'),
+                    _scorePill(
+                      'Score',
+                      '${result.rawScore} / ${result.maxScore}',
+                    ),
                     const SizedBox(width: 12),
                     _scorePill('Severity', result.severity),
                   ],
@@ -690,15 +762,21 @@ class _DSM5Level2AssessmentScreenState
               borderRadius: BorderRadius.circular(20),
               boxShadow: AppTheme.softShadow,
               border: Border.all(
-                color: result.requiresAction ? AppTheme.warningOrange.withOpacity(0.4) : AppTheme.dividerColor,
+                color: result.requiresAction
+                    ? AppTheme.warningOrange.withValues(alpha: 0.4)
+                    : AppTheme.dividerColor,
               ),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(
-                  result.requiresAction ? Icons.medical_services_outlined : Icons.info_outline,
-                  color: result.requiresAction ? AppTheme.warningOrange : AppTheme.infoBlue,
+                  result.requiresAction
+                      ? Icons.medical_services_outlined
+                      : Icons.info_outline,
+                  color: result.requiresAction
+                      ? AppTheme.warningOrange
+                      : AppTheme.infoBlue,
                   size: 22,
                 ),
                 const SizedBox(width: 12),
@@ -707,11 +785,15 @@ class _DSM5Level2AssessmentScreenState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        result.requiresAction ? 'Clinical Action Required' : 'Clinical Note',
+                        result.requiresAction
+                            ? 'Clinical Action Required'
+                            : 'Clinical Note',
                         style: GoogleFonts.poppins(
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
-                          color: result.requiresAction ? AppTheme.warningOrange : AppTheme.textDark,
+                          color: result.requiresAction
+                              ? AppTheme.warningOrange
+                              : AppTheme.textDark,
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -737,7 +819,7 @@ class _DSM5Level2AssessmentScreenState
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppTheme.skyBlue.withOpacity(0.5),
+                color: AppTheme.skyBlue.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
@@ -747,7 +829,10 @@ class _DSM5Level2AssessmentScreenState
                   Expanded(
                     child: Text(
                       'Next: ${_domains[_currentDomainIndex + 1].title} (${_domains.length - _currentDomainIndex - 1} remaining)',
-                      style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textMedium),
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: AppTheme.textMedium,
+                      ),
                     ),
                   ),
                 ],
@@ -762,17 +847,31 @@ class _DSM5Level2AssessmentScreenState
             child: ElevatedButton.icon(
               onPressed: _isSubmitting ? null : _proceedToNextDomain,
               icon: _isSubmitting
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
                   : Icon(isLast ? Icons.done_all : Icons.arrow_forward),
               label: Text(
                 isLast ? 'Finish & Save All Results' : 'Next Domain →',
-                style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600),
+                style: GoogleFonts.inter(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: isLast ? AppTheme.successGreen : AppTheme.textDark,
+                backgroundColor: isLast
+                    ? AppTheme.successGreen
+                    : AppTheme.textDark,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 18),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 elevation: 3,
               ),
             ),
@@ -786,16 +885,23 @@ class _DSM5Level2AssessmentScreenState
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
         children: [
-          Text(label, style: GoogleFonts.inter(fontSize: 10, color: Colors.white70)),
+          Text(
+            label,
+            style: GoogleFonts.inter(fontSize: 10, color: Colors.white70),
+          ),
           const SizedBox(height: 4),
           Text(
             value,
-            style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white),
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              color: Colors.white,
+            ),
           ),
         ],
       ),
@@ -804,10 +910,15 @@ class _DSM5Level2AssessmentScreenState
 
   Color _severityColor(String severity) {
     final s = severity.toLowerCase();
-    if (s.contains('severe') || s.contains('high') || s.contains('urgent') || s.contains('mania likely')) {
+    if (s.contains('severe') ||
+        s.contains('high') ||
+        s.contains('urgent') ||
+        s.contains('mania likely')) {
       return AppTheme.errorRed;
     }
-    if (s.contains('moderate') || s.contains('hypomania') || s.contains('medium')) {
+    if (s.contains('moderate') ||
+        s.contains('hypomania') ||
+        s.contains('medium')) {
       return AppTheme.warningOrange;
     }
     if (s.contains('mild') || s.contains('low')) {
@@ -846,7 +957,10 @@ class _FinalSummarySheet extends StatelessWidget {
               margin: const EdgeInsets.only(top: 12),
               width: 40,
               height: 4,
-              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
             Padding(
               padding: const EdgeInsets.all(20),
@@ -855,7 +969,7 @@ class _FinalSummarySheet extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: AppTheme.successGreen.withOpacity(0.15),
+                      color: AppTheme.successGreen.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Icon(Icons.done_all, color: AppTheme.successGreen),
@@ -865,10 +979,20 @@ class _FinalSummarySheet extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Level 2 Complete',
-                            style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 18)),
-                        Text('${results.length} domain(s) assessed',
-                            style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textGrey)),
+                        Text(
+                          'Level 2 Complete',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                        Text(
+                          '${results.length} domain(s) assessed',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: AppTheme.textGrey,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -884,32 +1008,46 @@ class _FinalSummarySheet extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: AppTheme.errorRed.withOpacity(0.1),
+                        color: AppTheme.errorRed.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppTheme.errorRed.withOpacity(0.3)),
+                        border: Border.all(
+                          color: AppTheme.errorRed.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.warning_rounded, color: AppTheme.errorRed, size: 18),
+                              Icon(
+                                Icons.warning_rounded,
+                                color: AppTheme.errorRed,
+                                size: 18,
+                              ),
                               const SizedBox(width: 8),
-                              Text('Clinical Action Required',
-                                  style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
-                                      color: AppTheme.errorRed)),
+                              Text(
+                                'Clinical Action Required',
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                  color: AppTheme.errorRed,
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 8),
-                          ...actionsRequired.map((r) => Padding(
-                                padding: const EdgeInsets.only(bottom: 4),
-                                child: Text(
-                                  '• ${r.domainTitle}: ${r.severity}',
-                                  style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMedium),
+                          ...actionsRequired.map(
+                            (r) => Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: Text(
+                                '• ${r.domainTitle}: ${r.severity}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: AppTheme.textMedium,
                                 ),
-                              )),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -927,7 +1065,9 @@ class _FinalSummarySheet extends StatelessWidget {
                         backgroundColor: AppTheme.textDark,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
                     ),
                   ),
@@ -970,15 +1110,30 @@ class _ResultTile extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(result.domainTitle,
-                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14)),
+                child: Text(
+                  result.domainTitle,
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 child: Text(
                   '${result.rawScore}/${result.maxScore}',
-                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: color),
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
                 ),
               ),
             ],
@@ -986,12 +1141,20 @@ class _ResultTile extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             result.severity,
-            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: color),
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             result.clinicalNote,
-            style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textGrey, height: 1.4),
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              color: AppTheme.textGrey,
+              height: 1.4,
+            ),
           ),
         ],
       ),
@@ -1000,8 +1163,14 @@ class _ResultTile extends StatelessWidget {
 
   Color _color(String severity) {
     final s = severity.toLowerCase();
-    if (s.contains('severe') || s.contains('high') || s.contains('mania')) return AppTheme.errorRed;
-    if (s.contains('moderate') || s.contains('hypomania') || s.contains('medium')) return AppTheme.warningOrange;
+    if (s.contains('severe') || s.contains('high') || s.contains('mania')) {
+      return AppTheme.errorRed;
+    }
+    if (s.contains('moderate') ||
+        s.contains('hypomania') ||
+        s.contains('medium')) {
+      return AppTheme.warningOrange;
+    }
     if (s.contains('mild') || s.contains('low')) return const Color(0xFF66BB6A);
     return AppTheme.infoBlue;
   }

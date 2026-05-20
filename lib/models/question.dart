@@ -1,10 +1,4 @@
-enum QuestionType {
-  yesNo,
-  multipleChoice,
-  textInput,
-  scale,
-  date
-}
+enum QuestionType { yesNo, multipleChoice, textInput, scale, date }
 
 class Question {
   final int? id;
@@ -31,17 +25,21 @@ class Question {
     this.createdBy,
     DateTime? createdAt,
     DateTime? updatedAt,
-  })  : createdAt = createdAt ?? DateTime.now(),
-        updatedAt = updatedAt ?? DateTime.now();
+  }) : createdAt = createdAt ?? DateTime.now(),
+       updatedAt = updatedAt ?? DateTime.now();
 
-  String get questionId => id?.toString() ?? 'temp_${text.hashCode}';
+  String get questionId {
+    if (id != null) return id.toString();
+    if (order > 0) return 'q$order';
+    return 'temp_${text.hashCode}';
+  }
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'question_text': text,
       'question_type': type.name,
-      'options': options != null ? options!.join('|||') : null,
+      'options': options?.join('|||'),
       'required': required ? 1 : 0,
       'category': category,
       'order_index': order,
@@ -118,10 +116,6 @@ class QuestionResponse {
   });
 
   Map<String, dynamic> toMap() {
-    return {
-      'question_id': questionId,
-      'answer': answer,
-      'notes': notes,
-    };
+    return {'question_id': questionId, 'answer': answer, 'notes': notes};
   }
 }

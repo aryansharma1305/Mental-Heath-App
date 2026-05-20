@@ -37,7 +37,8 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
   final Map<String, dynamic> _responses = {};
   final Map<String, String> _explanations = {};
 
-  int _currentStep = 0; // 0=patientInfo, 1=gate, 2=sec1, 3=sec2, 4=sec3, 5=sec4, 6=consent
+  int _currentStep =
+      0; // 0=patientInfo, 1=gate, 2=sec1, 3=sec2, 4=sec3, 5=sec4, 6=consent
   bool _isSubmitting = false;
 
   // Steps labelling
@@ -131,12 +132,15 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: GoogleFonts.inter(
-                          fontWeight: FontWeight.w700, fontSize: 13)),
+                  Text(
+                    title,
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
                   const SizedBox(height: 2),
-                  Text(message,
-                      style: GoogleFonts.inter(fontSize: 11)),
+                  Text(message, style: GoogleFonts.inter(fontSize: 11)),
                 ],
               ),
             ),
@@ -225,8 +229,9 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
 
     try {
       final currentUser = await _authService.getCurrentUserModel();
-      final determination =
-          MHCAAssessmentQuestions.getDetermination(_responses);
+      final determination = MHCAAssessmentQuestions.getDetermination(
+        _responses,
+      );
       final summary = MHCAAssessmentQuestions.generateSummary(_responses);
 
       final assessmentData = {
@@ -259,8 +264,7 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
         assessmentDate: DateTime.now(),
         assessorName: assessmentData['assessor_name'] as String,
         assessorRole: currentUser?.role.name ?? 'Doctor',
-        assessorUserId:
-            currentUser?.id != 'unknown' ? currentUser?.id : null,
+        assessorUserId: currentUser?.id != 'unknown' ? currentUser?.id : null,
         decisionContext: 'MHCA Treatment Capacity',
         responses: Map<String, dynamic>.from(_responses)
           ..addAll({'explanations': _explanations}),
@@ -306,11 +310,10 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppTheme.successGreen.withOpacity(0.2),
+                color: AppTheme.successGreen.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child:
-                  Icon(Icons.check_circle, color: AppTheme.successGreen),
+              child: Icon(Icons.check_circle, color: AppTheme.successGreen),
             ),
             const SizedBox(width: 12),
             const Expanded(child: Text('Assessment Complete')),
@@ -321,8 +324,7 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildResultRow('Patient',
-                  _nameController.text.trim()),
+              _buildResultRow('Patient', _nameController.text.trim()),
               _buildResultRow('Purpose', _purpose),
               const Divider(height: 24),
               Text(
@@ -337,8 +339,8 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: hasCapacity
-                      ? AppTheme.successGreen.withOpacity(0.1)
-                      : AppTheme.warningOrange.withOpacity(0.1),
+                      ? AppTheme.successGreen.withValues(alpha: 0.1)
+                      : AppTheme.warningOrange.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: hasCapacity
@@ -406,9 +408,11 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
         children: [
           Text(label, style: GoogleFonts.inter(color: AppTheme.textGrey)),
           Flexible(
-            child: Text(value,
-                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                textAlign: TextAlign.end),
+            child: Text(
+              value,
+              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+              textAlign: TextAlign.end,
+            ),
           ),
         ],
       ),
@@ -513,7 +517,8 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(_totalSteps, (index) {
               final isActive = index == _currentStep;
-              final isCompleted = index < _currentStep && !_isStepSkipped(index);
+              final isCompleted =
+                  index < _currentStep && !_isStepSkipped(index);
               final isSkipped = _isStepSkipped(index);
 
               return Expanded(
@@ -525,10 +530,10 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
                     color: isActive
                         ? AppTheme.primaryColor
                         : isSkipped
-                            ? Colors.grey.shade300
-                            : isCompleted
-                                ? AppTheme.successGreen
-                                : AppTheme.dividerColor,
+                        ? Colors.grey.shade300
+                        : isCompleted
+                        ? AppTheme.successGreen
+                        : AppTheme.dividerColor,
                   ),
                 ),
               );
@@ -547,10 +552,12 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
               ),
               Flexible(
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.1),
+                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -602,7 +609,7 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -4),
           ),
@@ -626,10 +633,13 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
                   children: [
                     Icon(Icons.arrow_back, color: AppTheme.textGrey),
                     const SizedBox(width: 8),
-                    Text('Previous',
-                        style: GoogleFonts.inter(
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.textGrey)),
+                    Text(
+                      'Previous',
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textGrey,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -654,8 +664,7 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
                       height: 24,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(Colors.white),
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
                   : Row(
@@ -701,26 +710,35 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Icon(Icons.medical_information_outlined,
-                      color: AppTheme.infoBlue, size: 28),
+                  child: Icon(
+                    Icons.medical_information_outlined,
+                    color: AppTheme.infoBlue,
+                    size: 28,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Capacity Assessment',
-                          style: GoogleFonts.poppins(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.textDark)),
                       Text(
-                          'Treatment Decisions including Admission\n(MHCA 2017, Sec 102/103)',
-                          style: GoogleFonts.inter(
-                              fontSize: 12, color: AppTheme.textGrey)),
+                        'Capacity Assessment',
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textDark,
+                        ),
+                      ),
+                      Text(
+                        'Treatment Decisions including Admission\n(MHCA 2017, Sec 102/103)',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: AppTheme.textGrey,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -730,21 +748,29 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
 
           const SizedBox(height: 24),
 
-          _buildTextField('Name / Anonymised ID *', _nameController,
-              Icons.person_outline),
           _buildTextField(
-              'Age / Sex', _ageSexController, Icons.cake_outlined),
+            'Name / Anonymised ID *',
+            _nameController,
+            Icons.person_outline,
+          ),
+          _buildTextField('Age / Sex', _ageSexController, Icons.cake_outlined),
+          _buildTextField('P. No', _pNoController, Icons.badge_outlined),
           _buildTextField(
-              'P. No', _pNoController, Icons.badge_outlined),
-          _buildTextField('Place of Assessment', _placeController,
-              Icons.location_on_outlined),
+            'Place of Assessment',
+            _placeController,
+            Icons.location_on_outlined,
+          ),
 
           const SizedBox(height: 16),
 
           // Advance Directive
-          Text('Advance Directive',
-              style: GoogleFonts.inter(
-                  fontWeight: FontWeight.w600, color: AppTheme.textDark)),
+          Text(
+            'Advance Directive',
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textDark,
+            ),
+          ),
           const SizedBox(height: 8),
           _buildChipSelector(
             MHCAAssessmentQuestions.advanceDirectiveOptions,
@@ -755,9 +781,13 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
           const SizedBox(height: 16),
 
           // Purpose
-          Text('Purpose of this Assessment',
-              style: GoogleFonts.inter(
-                  fontWeight: FontWeight.w600, color: AppTheme.textDark)),
+          Text(
+            'Purpose of this Assessment',
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textDark,
+            ),
+          ),
           const SizedBox(height: 8),
           _buildChipSelector(
             MHCAAssessmentQuestions.purposeOptions,
@@ -767,14 +797,26 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
 
           const SizedBox(height: 16),
 
-          _buildTextField('Nominated Representative Name',
-              _nominatedRepNameController, Icons.person_add_outlined),
-          _buildTextField('Nominated Representative ID',
-              _nominatedRepIdController, Icons.fingerprint),
-          _buildTextField('Diagnosis (provisional)', _diagnosisController,
-              Icons.medical_services_outlined),
-          _buildTextField('Doctor / Assessor Name', _doctorNameController,
-              Icons.local_hospital_outlined),
+          _buildTextField(
+            'Nominated Representative Name',
+            _nominatedRepNameController,
+            Icons.person_add_outlined,
+          ),
+          _buildTextField(
+            'Nominated Representative ID',
+            _nominatedRepIdController,
+            Icons.fingerprint,
+          ),
+          _buildTextField(
+            'Diagnosis (provisional)',
+            _diagnosisController,
+            Icons.medical_services_outlined,
+          ),
+          _buildTextField(
+            'Doctor / Assessor Name',
+            _doctorNameController,
+            Icons.local_hospital_outlined,
+          ),
 
           const SizedBox(height: 20),
         ],
@@ -783,7 +825,10 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
   }
 
   Widget _buildTextField(
-      String label, TextEditingController controller, IconData icon) {
+    String label,
+    TextEditingController controller,
+    IconData icon,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: TextFormField(
@@ -803,7 +848,10 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
   }
 
   Widget _buildChipSelector(
-      List<String> options, String selectedValue, Function(String) onSelected) {
+    List<String> options,
+    String selectedValue,
+    Function(String) onSelected,
+  ) {
     return Wrap(
       spacing: 8,
       children: options.map((opt) {
@@ -836,8 +884,10 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildSectionHeader(
-              gate['section'] as String, Icons.warning_amber_rounded,
-              gradient: AppTheme.pinkGradient),
+            gate['section'] as String,
+            Icons.warning_amber_rounded,
+            gradient: AppTheme.pinkGradient,
+          ),
           const SizedBox(height: 16),
           _buildQuestionCard(
             gate['id'] as String,
@@ -869,12 +919,14 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
                 'on treatment or admission',
           ),
           const SizedBox(height: 16),
-          ...questions.map((q) => _buildQuestionCard(
-                q['id'] as String,
-                '${q['label']}. ${q['text']}',
-                q['options'] as List<String>,
-                hasExplanation: q['hasExplanation'] == true,
-              )),
+          ...questions.map(
+            (q) => _buildQuestionCard(
+              q['id'] as String,
+              '${q['label']}. ${q['text']}',
+              q['options'] as List<String>,
+              hasExplanation: q['hasExplanation'] == true,
+            ),
+          ),
         ],
       ),
     );
@@ -894,7 +946,8 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
             '2. Appreciating',
             Icons.psychology_outlined,
             gradient: AppTheme.purpleGradient,
-            subtitle: 'Appreciating reasonably foreseeable consequence of a '
+            subtitle:
+                'Appreciating reasonably foreseeable consequence of a '
                 'decision or lack of decision on the treatment or admission',
           ),
           const SizedBox(height: 16),
@@ -935,16 +988,19 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
             '3. Communicating',
             Icons.chat_outlined,
             gradient: AppTheme.beigeGradient,
-            subtitle: 'Communicating the decision as per question (1) by means '
+            subtitle:
+                'Communicating the decision as per question (1) by means '
                 'of speech, expression, gesture or any other means',
           ),
           const SizedBox(height: 16),
-          ...questions.map((q) => _buildQuestionCard(
-                q['id'] as String,
-                '${q['label']}. ${q['text']}',
-                q['options'] as List<String>,
-                hasExplanation: q['hasExplanation'] == true,
-              )),
+          ...questions.map(
+            (q) => _buildQuestionCard(
+              q['id'] as String,
+              '${q['label']}. ${q['text']}',
+              q['options'] as List<String>,
+              hasExplanation: q['hasExplanation'] == true,
+            ),
+          ),
         ],
       ),
     );
@@ -973,8 +1029,9 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
             final opt = entry.value;
             final optKey = idx == 0 ? 'a' : 'b';
             final isSelected = _responses['determination'] == optKey;
-            final color =
-                idx == 0 ? AppTheme.successGreen : AppTheme.warningOrange;
+            final color = idx == 0
+                ? AppTheme.successGreen
+                : AppTheme.warningOrange;
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 16),
@@ -986,8 +1043,9 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
                   duration: const Duration(milliseconds: 200),
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color:
-                        isSelected ? color.withOpacity(0.1) : Colors.white,
+                    color: isSelected
+                        ? color.withValues(alpha: 0.1)
+                        : Colors.white,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: isSelected ? color : AppTheme.dividerColor,
@@ -996,7 +1054,7 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
                     boxShadow: isSelected
                         ? [
                             BoxShadow(
-                              color: color.withOpacity(0.2),
+                              color: color.withValues(alpha: 0.2),
                               blurRadius: 12,
                               offset: const Offset(0, 4),
                             ),
@@ -1011,13 +1069,16 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
                         decoration: BoxDecoration(
                           color: isSelected
                               ? color
-                              : color.withOpacity(0.2),
+                              : color.withValues(alpha: 0.2),
                           shape: BoxShape.circle,
                         ),
                         child: Center(
                           child: isSelected
-                              ? const Icon(Icons.check,
-                                  color: Colors.white, size: 20)
+                              ? const Icon(
+                                  Icons.check,
+                                  color: Colors.white,
+                                  size: 20,
+                                )
                               : Text(
                                   optKey.toUpperCase(),
                                   style: GoogleFonts.poppins(
@@ -1125,10 +1186,11 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppTheme.skyBlue.withOpacity(0.5),
+                    color: AppTheme.skyBlue.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                        color: AppTheme.infoBlue.withOpacity(0.3)),
+                      color: AppTheme.infoBlue.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -1159,8 +1221,12 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
   // ============================
   //  REUSABLE WIDGETS
   // ============================
-  Widget _buildSectionHeader(String title, IconData icon,
-      {LinearGradient? gradient, String? subtitle}) {
+  Widget _buildSectionHeader(
+    String title,
+    IconData icon, {
+    LinearGradient? gradient,
+    String? subtitle,
+  }) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -1173,7 +1239,7 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(icon, size: 28, color: AppTheme.textDark),
@@ -1183,15 +1249,22 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: GoogleFonts.poppins(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textDark)),
+                Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textDark,
+                  ),
+                ),
                 if (subtitle != null)
-                  Text(subtitle,
-                      style: GoogleFonts.inter(
-                          fontSize: 12, color: AppTheme.textGrey)),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: AppTheme.textGrey,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -1237,13 +1310,20 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline,
-                      size: 16, color: AppTheme.warningOrange),
+                  Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: AppTheme.warningOrange,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(note,
-                        style: GoogleFonts.inter(
-                            fontSize: 11, color: AppTheme.textGrey)),
+                    child: Text(
+                      note,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: AppTheme.textGrey,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -1271,11 +1351,13 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
                 },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? chipColor.withOpacity(0.15)
+                        ? chipColor.withValues(alpha: 0.15)
                         : Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
@@ -1287,16 +1369,15 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (isSelected)
-                        Icon(Icons.check_circle,
-                            size: 18, color: chipColor),
+                        Icon(Icons.check_circle, size: 18, color: chipColor),
                       if (isSelected) const SizedBox(width: 6),
                       Text(
                         opt,
                         style: GoogleFonts.inter(
-                          fontWeight:
-                              isSelected ? FontWeight.w600 : FontWeight.normal,
-                          color:
-                              isSelected ? chipColor : AppTheme.textMedium,
+                          fontWeight: isSelected
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                          color: isSelected ? chipColor : AppTheme.textMedium,
                         ),
                       ),
                     ],

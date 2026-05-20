@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/question.dart';
 import '../models/assessment_template.dart';
@@ -7,7 +6,6 @@ import '../services/question_service.dart';
 import '../services/supabase_service.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
-import '../widgets/custom_widgets.dart';
 
 class AdminPanelScreen extends StatefulWidget {
   const AdminPanelScreen({super.key});
@@ -16,17 +14,18 @@ class AdminPanelScreen extends StatefulWidget {
   State<AdminPanelScreen> createState() => _AdminPanelScreenState();
 }
 
-class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerProviderStateMixin {
+class _AdminPanelScreenState extends State<AdminPanelScreen>
+    with SingleTickerProviderStateMixin {
   final SupabaseService _supabaseService = SupabaseService();
   final QuestionService _questionService = QuestionService();
   final AuthService _authService = AuthService();
-  
+
   List<AssessmentTemplate> _templates = [];
   List<Question> _allQuestions = []; // All available questions
   bool _isLoading = true;
   late TabController _tabController;
   int _selectedTab = 0; // 0 = Assessments, 1 = Questions, 2 = Analytics
-  
+
   @override
   void initState() {
     super.initState();
@@ -36,33 +35,30 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
     });
     _loadData();
   }
-  
+
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
   }
-  
+
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      await Future.wait([
-        _loadTemplates(),
-        _loadAllQuestions(),
-      ]);
+      await Future.wait([_loadTemplates(), _loadAllQuestions()]);
     } catch (e) {
       debugPrint('Error loading data: $e');
     } finally {
       setState(() => _isLoading = false);
     }
   }
-  
+
   Future<void> _loadTemplates() async {
     if (SupabaseService.isAvailable) {
       _templates = await _supabaseService.getAllTemplates();
     }
   }
-  
+
   Future<void> _loadAllQuestions() async {
     if (SupabaseService.isAvailable) {
       _allQuestions = await _supabaseService.getAllQuestions();
@@ -70,13 +66,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
       _allQuestions = await _questionService.getAllQuestions();
     }
   }
-  
+
   Future<void> _showCreateTemplateDialog() async {
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (context) => _CreateTemplateDialog(),
     );
-    
+
     if (result != null) {
       try {
         final currentUser = await _authService.getCurrentUserModel();
@@ -85,14 +81,15 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
           description: result['description'] as String?,
           createdBy: currentUser?.id,
         );
-        
+
         if (SupabaseService.isAvailable) {
           final templateId = await _supabaseService.createTemplate(template);
           if (mounted) {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => _EditTemplateScreen(templateId: templateId),
+                builder: (context) =>
+                    _EditTemplateScreen(templateId: templateId),
               ),
             ).then((_) => _loadTemplates());
           }
@@ -109,7 +106,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
       }
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -141,15 +138,15 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
               label: const Text('New Assessment'),
             )
           : _selectedTab == 1
-              ? FloatingActionButton.extended(
-                  onPressed: () => _showAddQuestionDialog(),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add Question'),
-                )
-              : null,
+          ? FloatingActionButton.extended(
+              onPressed: () => _showAddQuestionDialog(),
+              icon: const Icon(Icons.add),
+              label: const Text('Add Question'),
+            )
+          : null,
     );
   }
-  
+
   Widget _buildAssessmentsTab() {
     if (_templates.isEmpty) {
       return Center(
@@ -171,7 +168,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
         ),
       );
     }
-    
+
     return RefreshIndicator(
       onRefresh: _loadTemplates,
       child: ListView.builder(
@@ -182,12 +179,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
             elevation: 2,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: ListTile(
               contentPadding: const EdgeInsets.all(16),
               leading: CircleAvatar(
-                backgroundColor: template.isActive 
-                    ? AppTheme.primaryBlue 
+                backgroundColor: template.isActive
+                    ? AppTheme.primaryBlue
                     : Colors.grey,
                 child: const Icon(Icons.assignment, color: Colors.white),
               ),
@@ -208,7 +207,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                         await Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => _EditTemplateScreen(templateId: template.id!),
+                            builder: (context) =>
+                                _EditTemplateScreen(templateId: template.id!),
                           ),
                         );
                         _loadTemplates();
@@ -226,7 +226,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                   await Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => _EditTemplateScreen(templateId: template.id!),
+                      builder: (context) =>
+                          _EditTemplateScreen(templateId: template.id!),
                     ),
                   );
                   _loadTemplates();
@@ -238,7 +239,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
       ),
     );
   }
-  
+
   Widget _buildQuestionsTab() {
     // Keep existing questions management
     if (_allQuestions.isEmpty) {
@@ -261,7 +262,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
         ),
       );
     }
-    
+
     return RefreshIndicator(
       onRefresh: _loadAllQuestions,
       child: ListView.builder(
@@ -272,16 +273,21 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
             elevation: 2,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: ListTile(
               contentPadding: const EdgeInsets.all(16),
               leading: CircleAvatar(
-                backgroundColor: question.isActive 
-                    ? AppTheme.primaryBlue 
+                backgroundColor: question.isActive
+                    ? AppTheme.primaryBlue
                     : Colors.grey,
                 child: Text(
                   '${index + 1}',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               title: Text(
@@ -295,9 +301,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
-                          color: _getTypeColor(question.type.name).withOpacity(0.2),
+                          color: _getTypeColor(
+                            question.type.name,
+                          ).withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
@@ -311,14 +322,20 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                       if (question.category != null) ...[
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.grey[200],
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
                             question.category!,
-                            style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[700],
+                            ),
                           ),
                         ),
                       ],
@@ -345,25 +362,50 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
       ),
     );
   }
-  
+
   Widget _buildAnalyticsTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          _buildStatCard('Total Assessments', _templates.length.toString(), Icons.assignment, AppTheme.primaryBlue),
+          _buildStatCard(
+            'Total Assessments',
+            _templates.length.toString(),
+            Icons.assignment,
+            AppTheme.primaryBlue,
+          ),
           const SizedBox(height: 12),
-          _buildStatCard('Active Assessments', _templates.where((t) => t.isActive).length.toString(), Icons.check_circle, AppTheme.accentGreen),
+          _buildStatCard(
+            'Active Assessments',
+            _templates.where((t) => t.isActive).length.toString(),
+            Icons.check_circle,
+            AppTheme.accentGreen,
+          ),
           const SizedBox(height: 12),
-          _buildStatCard('Total Questions', _allQuestions.length.toString(), Icons.quiz, AppTheme.infoBlue),
+          _buildStatCard(
+            'Total Questions',
+            _allQuestions.length.toString(),
+            Icons.quiz,
+            AppTheme.infoBlue,
+          ),
           const SizedBox(height: 12),
-          _buildStatCard('Active Questions', _allQuestions.where((q) => q.isActive).length.toString(), Icons.check_circle, AppTheme.warningOrange),
+          _buildStatCard(
+            'Active Questions',
+            _allQuestions.where((q) => q.isActive).length.toString(),
+            Icons.check_circle,
+            AppTheme.warningOrange,
+          ),
         ],
       ),
     );
   }
-  
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -377,7 +419,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                 children: [
                   Text(
                     title,
-                    style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[600]),
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
                   ),
                   Text(
                     value,
@@ -395,7 +440,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
       ),
     );
   }
-  
+
   Color _getTypeColor(String type) {
     switch (type) {
       case 'yesNo':
@@ -412,13 +457,15 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
         return Colors.grey;
     }
   }
-  
+
   Future<void> _deleteTemplate(int templateId) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Assessment'),
-        content: const Text('Are you sure you want to delete this assessment template?'),
+        content: const Text(
+          'Are you sure you want to delete this assessment template?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -432,7 +479,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
         ],
       ),
     );
-    
+
     if (confirm == true) {
       try {
         await _supabaseService.deleteTemplate(templateId);
@@ -457,13 +504,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
       }
     }
   }
-  
+
   Future<void> _showAddQuestionDialog() async {
     final result = await showDialog<Question>(
       context: context,
       builder: (context) => const AddEditQuestionDialog(),
     );
-    
+
     if (result != null) {
       try {
         if (SupabaseService.isAvailable) {
@@ -492,13 +539,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
       }
     }
   }
-  
+
   Future<void> _showEditQuestionDialog(Question question) async {
     final result = await showDialog<Question>(
       context: context,
       builder: (context) => AddEditQuestionDialog(question: question),
     );
-    
+
     if (result != null) {
       try {
         if (SupabaseService.isAvailable) {
@@ -527,7 +574,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
       }
     }
   }
-  
+
   Future<void> _deleteQuestion(int questionId) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -547,7 +594,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
         ],
       ),
     );
-    
+
     if (confirm == true) {
       try {
         if (SupabaseService.isAvailable) {
@@ -588,14 +635,14 @@ class _CreateTemplateDialogState extends State<_CreateTemplateDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
-  
+
   @override
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -658,9 +705,9 @@ class _CreateTemplateDialogState extends State<_CreateTemplateDialog> {
 // Edit Template Screen - Shows template and allows adding/removing questions
 class _EditTemplateScreen extends StatefulWidget {
   final int templateId;
-  
+
   const _EditTemplateScreen({required this.templateId});
-  
+
   @override
   State<_EditTemplateScreen> createState() => _EditTemplateScreenState();
 }
@@ -668,33 +715,35 @@ class _EditTemplateScreen extends StatefulWidget {
 class _EditTemplateScreenState extends State<_EditTemplateScreen> {
   final SupabaseService _supabaseService = SupabaseService();
   final QuestionService _questionService = QuestionService();
-  
+
   AssessmentTemplate? _template;
   List<Question> _templateQuestions = [];
   List<Question> _availableQuestions = [];
   bool _isLoading = true;
-  
+
   @override
   void initState() {
     super.initState();
     _loadTemplateData();
   }
-  
+
   Future<void> _loadTemplateData() async {
     setState(() => _isLoading = true);
     try {
-      _template = await _supabaseService.getTemplateWithQuestions(widget.templateId);
+      _template = await _supabaseService.getTemplateWithQuestions(
+        widget.templateId,
+      );
       if (_template != null) {
         _templateQuestions = _template!.questions ?? [];
       }
-      
+
       // Load all available questions
       if (SupabaseService.isAvailable) {
         _availableQuestions = await _supabaseService.getAllQuestions();
       } else {
         _availableQuestions = await _questionService.getAllQuestions();
       }
-      
+
       // Filter out questions already in template
       final templateQuestionIds = _templateQuestions.map((q) => q.id).toSet();
       _availableQuestions = _availableQuestions
@@ -706,7 +755,7 @@ class _EditTemplateScreenState extends State<_EditTemplateScreen> {
       setState(() => _isLoading = false);
     }
   }
-  
+
   Future<void> _addQuestionToTemplate(int questionId) async {
     try {
       final orderIndex = _templateQuestions.length;
@@ -735,10 +784,13 @@ class _EditTemplateScreenState extends State<_EditTemplateScreen> {
       }
     }
   }
-  
+
   Future<void> _removeQuestionFromTemplate(int questionId) async {
     try {
-      await _supabaseService.removeQuestionFromTemplate(widget.templateId, questionId);
+      await _supabaseService.removeQuestionFromTemplate(
+        widget.templateId,
+        questionId,
+      );
       _loadTemplateData();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -759,7 +811,7 @@ class _EditTemplateScreenState extends State<_EditTemplateScreen> {
       }
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -768,14 +820,14 @@ class _EditTemplateScreenState extends State<_EditTemplateScreen> {
         body: const Center(child: CircularProgressIndicator()),
       );
     }
-    
+
     if (_template == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Edit Assessment')),
         body: const Center(child: Text('Assessment not found')),
       );
     }
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Text(_template!.name),
@@ -791,7 +843,7 @@ class _EditTemplateScreenState extends State<_EditTemplateScreen> {
           // Template Info
           Container(
             padding: const EdgeInsets.all(16),
-            color: AppTheme.primaryBlue.withOpacity(0.1),
+            color: AppTheme.primaryBlue.withValues(alpha: 0.1),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -812,7 +864,7 @@ class _EditTemplateScreenState extends State<_EditTemplateScreen> {
               ],
             ),
           ),
-          
+
           // Questions in Template
           Expanded(
             child: _templateQuestions.isEmpty
@@ -820,16 +872,26 @@ class _EditTemplateScreenState extends State<_EditTemplateScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.quiz_outlined, size: 64, color: Colors.grey[300]),
+                        Icon(
+                          Icons.quiz_outlined,
+                          size: 64,
+                          color: Colors.grey[300],
+                        ),
                         const SizedBox(height: 16),
                         Text(
                           'No questions in this assessment',
-                          style: GoogleFonts.inter(fontSize: 16, color: Colors.grey[600]),
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            color: Colors.grey[600],
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           'Tap + to add questions',
-                          style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[500]),
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: Colors.grey[500],
+                          ),
                         ),
                       ],
                     ),
@@ -842,14 +904,16 @@ class _EditTemplateScreenState extends State<_EditTemplateScreen> {
                       return Card(
                         margin: const EdgeInsets.only(bottom: 12),
                         child: ListTile(
-                          leading: CircleAvatar(
-                            child: Text('${index + 1}'),
-                          ),
+                          leading: CircleAvatar(child: Text('${index + 1}')),
                           title: Text(question.text),
                           subtitle: Text(question.type.name),
                           trailing: IconButton(
-                            icon: const Icon(Icons.remove_circle, color: AppTheme.errorRed),
-                            onPressed: () => _removeQuestionFromTemplate(question.id!),
+                            icon: const Icon(
+                              Icons.remove_circle,
+                              color: AppTheme.errorRed,
+                            ),
+                            onPressed: () =>
+                                _removeQuestionFromTemplate(question.id!),
                           ),
                         ),
                       );
@@ -864,18 +928,20 @@ class _EditTemplateScreenState extends State<_EditTemplateScreen> {
       ),
     );
   }
-  
+
   Future<void> _showAddQuestionDialog() async {
     if (_availableQuestions.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('No available questions. Please create questions first.'),
+          content: Text(
+            'No available questions. Please create questions first.',
+          ),
           backgroundColor: AppTheme.warningOrange,
         ),
       );
       return;
     }
-    
+
     final selectedQuestion = await showDialog<Question>(
       context: context,
       builder: (context) => AlertDialog(
@@ -897,7 +963,7 @@ class _EditTemplateScreenState extends State<_EditTemplateScreen> {
         ),
       ),
     );
-    
+
     if (selectedQuestion != null && selectedQuestion.id != null) {
       await _addQuestionToTemplate(selectedQuestion.id!);
     }
@@ -907,9 +973,9 @@ class _EditTemplateScreenState extends State<_EditTemplateScreen> {
 // Keep existing AddEditQuestionDialog
 class AddEditQuestionDialog extends StatefulWidget {
   final Question? question;
-  
-  const AddEditQuestionDialog({this.question});
-  
+
+  const AddEditQuestionDialog({super.key, this.question});
+
   @override
   State<AddEditQuestionDialog> createState() => _AddEditQuestionDialogState();
 }
@@ -919,10 +985,10 @@ class _AddEditQuestionDialogState extends State<AddEditQuestionDialog> {
   final _questionController = TextEditingController();
   final _optionsController = TextEditingController();
   final _categoryController = TextEditingController();
-  
+
   String? _questionType;
   bool _required = true;
-  
+
   @override
   void initState() {
     super.initState();
@@ -936,7 +1002,7 @@ class _AddEditQuestionDialogState extends State<AddEditQuestionDialog> {
       }
     }
   }
-  
+
   @override
   void dispose() {
     _questionController.dispose();
@@ -944,7 +1010,7 @@ class _AddEditQuestionDialogState extends State<AddEditQuestionDialog> {
     _categoryController.dispose();
     super.dispose();
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -971,7 +1037,7 @@ class _AddEditQuestionDialogState extends State<AddEditQuestionDialog> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _questionType,
+                initialValue: _questionType,
                 decoration: const InputDecoration(
                   labelText: 'Question Type *',
                   border: OutlineInputBorder(),
@@ -999,7 +1065,8 @@ class _AddEditQuestionDialogState extends State<AddEditQuestionDialog> {
                     border: OutlineInputBorder(),
                   ),
                   validator: (value) {
-                    if (_questionType == 'multipleChoice' && (value == null || value.isEmpty)) {
+                    if (_questionType == 'multipleChoice' &&
+                        (value == null || value.isEmpty)) {
                       return 'Please enter options';
                     }
                     return null;
@@ -1035,9 +1102,15 @@ class _AddEditQuestionDialogState extends State<AddEditQuestionDialog> {
               final question = Question(
                 id: widget.question?.id,
                 text: _questionController.text.trim(),
-                type: QuestionType.values.firstWhere((t) => t.name == _questionType),
+                type: QuestionType.values.firstWhere(
+                  (t) => t.name == _questionType,
+                ),
                 options: _questionType == 'multipleChoice'
-                    ? _optionsController.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList()
+                    ? _optionsController.text
+                          .split(',')
+                          .map((e) => e.trim())
+                          .where((e) => e.isNotEmpty)
+                          .toList()
                     : null,
                 required: _required,
                 category: _categoryController.text.trim().isEmpty

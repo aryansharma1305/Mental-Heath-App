@@ -89,9 +89,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Help & Support'),
-      ),
+      appBar: AppBar(title: const Text('Help & Support')),
       body: Column(
         children: [
           // Search bar
@@ -174,7 +172,11 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.search_off, size: 64, color: Colors.grey[300]),
+                        Icon(
+                          Icons.search_off,
+                          size: 64,
+                          color: Colors.grey[300],
+                        ),
                         const SizedBox(height: 16),
                         Text(
                           'No results found',
@@ -247,9 +249,9 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.3)),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         child: Column(
           children: [
@@ -291,7 +293,11 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
             const SizedBox(height: 12),
             _buildContactItem(Icons.phone, 'Phone', '+1 (555) 123-4567'),
             const SizedBox(height: 12),
-            _buildContactItem(Icons.access_time, 'Hours', 'Mon-Fri, 9 AM - 5 PM'),
+            _buildContactItem(
+              Icons.access_time,
+              'Hours',
+              'Mon-Fri, 9 AM - 5 PM',
+            ),
           ],
         ),
         actions: [
@@ -314,10 +320,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
           children: [
             Text(
               label,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
+              style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600]),
             ),
             Text(
               value,
@@ -390,16 +393,10 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
       children: [
         Text(
           title,
-          style: GoogleFonts.inter(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
+          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         const SizedBox(height: 8),
-        Text(
-          content,
-          style: GoogleFonts.inter(fontSize: 14),
-        ),
+        Text(content, style: GoogleFonts.inter(fontSize: 14)),
       ],
     );
   }

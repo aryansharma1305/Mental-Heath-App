@@ -13,14 +13,14 @@ class SupabaseService {
       if (Supabase.instance.isInitialized) {
         return Supabase.instance.client;
       }
-      print('❌ SupabaseService: Supabase.instance is NOT initialized');
+      debugPrint('SupabaseService: Supabase.instance is NOT initialized');
       return null;
     } catch (e) {
-      print('❌ SupabaseService: Error getting client: $e');
+      debugPrint('SupabaseService: Error getting client: $e');
       return null;
     }
   }
-  
+
   // Check if Supabase is available
   static bool get isAvailable {
     try {
@@ -31,7 +31,7 @@ class SupabaseService {
   }
 
   // ========== USER OPERATIONS ==========
-  
+
   Future<app_models.User?> getUserById(String id) async {
     if (!isAvailable) return null;
     try {
@@ -40,7 +40,7 @@ class SupabaseService {
           .select()
           .eq('id', id)
           .single();
-      
+
       return app_models.User.fromMap(response);
     } catch (e) {
       return null;
@@ -55,8 +55,8 @@ class SupabaseService {
           .select()
           .eq('username', username)
           .single();
-      
-      return app_models.User.fromMap(response as Map<String, dynamic>);
+
+      return app_models.User.fromMap(response);
     } catch (e) {
       return null;
     }
@@ -73,7 +73,7 @@ class SupabaseService {
     if (!isAvailable) {
       throw Exception('Supabase is not available');
     }
-    
+
     final response = await client!
         .from('users')
         .insert({
@@ -86,20 +86,17 @@ class SupabaseService {
         })
         .select()
         .single();
-    
-    return app_models.User.fromMap(response as Map<String, dynamic>);
+
+    return app_models.User.fromMap(response);
   }
 
   Future<void> updateUser(app_models.User user) async {
     if (!isAvailable) return;
-    await client!
-        .from('users')
-        .update(user.toMap())
-        .eq('id', user.id);
+    await client!.from('users').update(user.toMap()).eq('id', user.id);
   }
 
   // ========== QUESTION OPERATIONS ==========
-  
+
   Future<List<Question>> getActiveQuestions() async {
     if (!isAvailable) return [];
     try {
@@ -108,10 +105,8 @@ class SupabaseService {
           .select()
           .eq('is_active', true)
           .order('order_index', ascending: true);
-      
-      return (response as List)
-          .map((item) => Question.fromMap(item))
-          .toList();
+
+      return (response as List).map((item) => Question.fromMap(item)).toList();
     } catch (e) {
       return [];
     }
@@ -124,10 +119,8 @@ class SupabaseService {
           .from('questions')
           .select()
           .order('order_index', ascending: true);
-      
-      return (response as List)
-          .map((item) => Question.fromMap(item))
-          .toList();
+
+      return (response as List).map((item) => Question.fromMap(item)).toList();
     } catch (e) {
       return [];
     }
@@ -137,13 +130,13 @@ class SupabaseService {
     if (!isAvailable) {
       throw Exception('Supabase is not available');
     }
-    
+
     // Create insert map WITHOUT id field (PostgreSQL will auto-generate it via SERIAL)
     // Explicitly build the map without id to avoid any null issues
     final insertMap = <String, dynamic>{
       'question_text': question.text,
       'question_type': question.type.name,
-      'options': question.options != null ? question.options!.join('|||') : null,
+      'options': question.options?.join('|||'),
       'required': question.required,
       'category': question.category,
       'order_index': question.order,
@@ -152,17 +145,19 @@ class SupabaseService {
       'created_at': question.createdAt.toIso8601String(),
       'updated_at': question.updatedAt.toIso8601String(),
     };
-    
+
     // Debug: Verify id is NOT in the map
     debugPrint('🔵 Inserting question - Map keys: ${insertMap.keys}');
-    debugPrint('🔵 Inserting question - Has id key? ${insertMap.containsKey('id')}');
-    
+    debugPrint(
+      '🔵 Inserting question - Has id key? ${insertMap.containsKey('id')}',
+    );
+
     final response = await client!
         .from('questions')
         .insert(insertMap)
         .select()
         .single();
-    
+
     debugPrint('✅ Question inserted successfully with id: ${response['id']}');
     return response['id'] as int;
   }
@@ -177,39 +172,41 @@ class SupabaseService {
 
   Future<void> deleteQuestion(int id) async {
     if (!isAvailable) return;
-    await client!
-        .from('questions')
-        .update({'is_active': false})
-        .eq('id', id);
+    await client!.from('questions').update({'is_active': false}).eq('id', id);
   }
 
   // ========== ASSESSMENT OPERATIONS ==========
-  
-  Future<int?> insertAssessment(Assessment assessment, {String? assessorUserId}) async {
+
+  Future<int?> insertAssessment(
+    Assessment assessment, {
+    String? assessorUserId,
+  }) async {
     if (!isAvailable) {
       throw Exception('Supabase is not available');
     }
     try {
       final response = await client!
-        .from('assessments')
-        .insert({
-          'patient_id': assessment.patientId,
-          'patient_name': assessment.patientName,
-          // 'patient_user_id': assessment.patientId, // Removed: patientId is TEXT, patient_user_id requires UUID
-          'assessment_date': assessment.assessmentDate.toIso8601String(),
-          'assessor_name': assessment.assessorName,
-          'assessor_role': assessment.assessorRole,
-          'assessor_user_id': assessorUserId ?? assessment.assessorUserId, // Use actual user ID
-          'decision_context': assessment.decisionContext,
-          'responses': assessment.responses,
-          'overall_capacity': assessment.overallCapacity,
-          'recommendations': assessment.recommendations,
-          'status': 'pending',
-        })
-        .select()
-        .single();
-    
-    return response['id'] as int;
+          .from('assessments')
+          .insert({
+            'patient_id': assessment.patientId,
+            'patient_name': assessment.patientName,
+            // 'patient_user_id': assessment.patientId, // Removed: patientId is TEXT, patient_user_id requires UUID
+            'assessment_date': assessment.assessmentDate.toIso8601String(),
+            'assessor_name': assessment.assessorName,
+            'assessor_role': assessment.assessorRole,
+            'assessor_user_id':
+                assessorUserId ??
+                assessment.assessorUserId, // Use actual user ID
+            'decision_context': assessment.decisionContext,
+            'responses': assessment.responses,
+            'overall_capacity': assessment.overallCapacity,
+            'recommendations': assessment.recommendations,
+            'status': 'pending',
+          })
+          .select()
+          .single();
+
+      return response['id'] as int;
     } catch (e) {
       return null;
     }
@@ -222,7 +219,7 @@ class SupabaseService {
           .from('assessments')
           .select()
           .order('assessment_date', ascending: false);
-      
+
       return (response as List)
           .map((item) => Assessment.fromMap(item))
           .toList();
@@ -239,7 +236,7 @@ class SupabaseService {
           .select()
           .eq('id', id)
           .single();
-      
+
       return Assessment.fromMap(response);
     } catch (e) {
       return null;
@@ -271,7 +268,7 @@ class SupabaseService {
   }
 
   // ========== DOCTOR REVIEW OPERATIONS ==========
-  
+
   Future<void> reviewAssessment({
     required int assessmentId,
     required String reviewerId,
@@ -279,7 +276,7 @@ class SupabaseService {
     String? doctorNotes,
   }) async {
     if (!isAvailable) return;
-    
+
     await client!
         .from('assessments')
         .update({
@@ -298,7 +295,7 @@ class SupabaseService {
     required String notes,
   }) async {
     if (!isAvailable) return;
-    
+
     await client!
         .from('assessments')
         .update({
@@ -319,7 +316,7 @@ class SupabaseService {
           .select()
           .eq('status', status)
           .order('assessment_date', ascending: false);
-      
+
       return (response as List)
           .map((item) => Assessment.fromMap(item))
           .toList();
@@ -337,7 +334,7 @@ class SupabaseService {
           .select()
           .inFilter('status', ['pending', 'reviewed'])
           .order('assessment_date', ascending: false);
-      
+
       return (response as List)
           .map((item) => Assessment.fromMap(item))
           .toList();
@@ -355,7 +352,7 @@ class SupabaseService {
           .select()
           .eq('status', 'pending')
           .order('assessment_date', ascending: false);
-      
+
       return (response as List)
           .map((item) => Assessment.fromMap(item))
           .toList();
@@ -364,7 +361,9 @@ class SupabaseService {
     }
   }
 
-  Future<List<Assessment>> getAssessmentsByPatientId(String patientUserId) async {
+  Future<List<Assessment>> getAssessmentsByPatientId(
+    String patientUserId,
+  ) async {
     if (!isAvailable) return [];
     try {
       final response = await client!
@@ -372,7 +371,7 @@ class SupabaseService {
           .select()
           .eq('patient_user_id', patientUserId)
           .order('assessment_date', ascending: false);
-      
+
       return (response as List)
           .map((item) => Assessment.fromMap(item))
           .toList();
@@ -381,7 +380,9 @@ class SupabaseService {
     }
   }
 
-  Future<List<Assessment>> getAssessmentsByAssessorId(String assessorUserId) async {
+  Future<List<Assessment>> getAssessmentsByAssessorId(
+    String assessorUserId,
+  ) async {
     if (!isAvailable) return [];
     try {
       final response = await client!
@@ -389,7 +390,7 @@ class SupabaseService {
           .select()
           .eq('assessor_user_id', assessorUserId)
           .order('assessment_date', ascending: false);
-      
+
       return (response as List)
           .map((item) => Assessment.fromMap(item))
           .toList();
@@ -407,7 +408,7 @@ class SupabaseService {
           .select()
           .or('assessor_user_id.is.null,assessor_user_id.eq.')
           .order('assessment_date', ascending: false);
-      
+
       return (response as List)
           .map((item) => Assessment.fromMap(item))
           .toList();
@@ -418,7 +419,7 @@ class SupabaseService {
   }
 
   // ========== ASSESSMENT TEMPLATES ==========
-  
+
   Future<List<AssessmentTemplate>> getAllTemplates() async {
     if (!isAvailable) return [];
     try {
@@ -427,7 +428,7 @@ class SupabaseService {
           .select()
           .eq('is_active', true)
           .order('created_at', ascending: false);
-      
+
       return (response as List)
           .map((item) => AssessmentTemplate.fromMap(item))
           .toList();
@@ -436,7 +437,7 @@ class SupabaseService {
       return [];
     }
   }
-  
+
   Future<AssessmentTemplate?> getTemplateWithQuestions(int templateId) async {
     if (!isAvailable) return null;
     try {
@@ -446,9 +447,9 @@ class SupabaseService {
           .select()
           .eq('id', templateId)
           .single();
-      
+
       final template = AssessmentTemplate.fromMap(templateResponse);
-      
+
       // Get questions for this template
       final questionsResponse = await client!
           .from('assessment_template_questions')
@@ -459,58 +460,58 @@ class SupabaseService {
           ''')
           .eq('template_id', templateId)
           .order('order_index', ascending: true);
-      
+
       final questions = <Question>[];
       for (var item in questionsResponse) {
         if (item['questions'] != null) {
           questions.add(Question.fromMap(item['questions']));
         }
       }
-      
+
       return template.copyWith(questions: questions);
     } catch (e) {
       debugPrint('Error getting template with questions: $e');
       return null;
     }
   }
-  
+
   Future<int> createTemplate(AssessmentTemplate template) async {
     if (!isAvailable) {
       throw Exception('Supabase is not available');
     }
-    
+
     final insertMap = <String, dynamic>{
       'name': template.name,
       'description': template.description,
       'is_active': template.isActive,
       'created_by': template.createdBy,
     };
-    
+
     final response = await client!
         .from('assessment_templates')
         .insert(insertMap)
         .select()
         .single();
-    
+
     return response['id'] as int;
   }
-  
+
   Future<void> updateTemplate(AssessmentTemplate template) async {
     if (!isAvailable || template.id == null) return;
-    
+
     final updateMap = <String, dynamic>{
       'name': template.name,
       'description': template.description,
       'is_active': template.isActive,
       'updated_at': DateTime.now().toIso8601String(),
     };
-    
+
     await client!
         .from('assessment_templates')
         .update(updateMap)
         .eq('id', template.id!);
   }
-  
+
   Future<void> deleteTemplate(int templateId) async {
     if (!isAvailable) return;
     await client!
@@ -518,52 +519,58 @@ class SupabaseService {
         .update({'is_active': false})
         .eq('id', templateId);
   }
-  
-  Future<void> addQuestionToTemplate(int templateId, int questionId, int orderIndex) async {
+
+  Future<void> addQuestionToTemplate(
+    int templateId,
+    int questionId,
+    int orderIndex,
+  ) async {
     if (!isAvailable) return;
-    
-    await client!
-        .from('assessment_template_questions')
-        .insert({
-          'template_id': templateId,
-          'question_id': questionId,
-          'order_index': orderIndex,
-        });
+
+    await client!.from('assessment_template_questions').insert({
+      'template_id': templateId,
+      'question_id': questionId,
+      'order_index': orderIndex,
+    });
   }
-  
-  Future<void> removeQuestionFromTemplate(int templateId, int questionId) async {
+
+  Future<void> removeQuestionFromTemplate(
+    int templateId,
+    int questionId,
+  ) async {
     if (!isAvailable) return;
-    
+
     await client!
         .from('assessment_template_questions')
         .delete()
         .eq('template_id', templateId)
         .eq('question_id', questionId);
   }
-  
-  Future<void> updateTemplateQuestionOrder(int templateId, List<int> questionIds) async {
+
+  Future<void> updateTemplateQuestionOrder(
+    int templateId,
+    List<int> questionIds,
+  ) async {
     if (!isAvailable) return;
-    
+
     // Delete all existing links
     await client!
         .from('assessment_template_questions')
         .delete()
         .eq('template_id', templateId);
-    
+
     // Re-insert with new order
     for (int i = 0; i < questionIds.length; i++) {
-      await client!
-          .from('assessment_template_questions')
-          .insert({
-            'template_id': templateId,
-            'question_id': questionIds[i],
-            'order_index': i,
-          });
+      await client!.from('assessment_template_questions').insert({
+        'template_id': templateId,
+        'question_id': questionIds[i],
+        'order_index': i,
+      });
     }
   }
-  
+
   // ========== QUESTION RESPONSES ==========
-  
+
   Future<void> saveQuestionResponse({
     required int templateId,
     required int questionId,
@@ -572,37 +579,35 @@ class SupabaseService {
     int? assessmentId,
   }) async {
     if (!isAvailable) return;
-    
+
     final insertMap = <String, dynamic>{
       'template_id': templateId,
       'question_id': questionId,
       'patient_user_id': patientUserId,
       'answer': answer,
     };
-    
+
     if (assessmentId != null) {
       insertMap['assessment_id'] = assessmentId;
     }
-    
-    await client!
-        .from('question_responses')
-        .insert(insertMap);
+
+    await client!.from('question_responses').insert(insertMap);
   }
-  
+
   Future<List<Map<String, dynamic>>> getQuestionResponses({
     int? templateId,
     String? patientUserId,
     int? assessmentId,
   }) async {
     if (!isAvailable) return [];
-    
+
     try {
       var query = client!.from('question_responses').select('''
         *,
         questions (*),
         assessment_templates (name, description)
       ''');
-      
+
       if (templateId != null) {
         query = query.eq('template_id', templateId);
       }
@@ -612,7 +617,7 @@ class SupabaseService {
       if (assessmentId != null) {
         query = query.eq('assessment_id', assessmentId);
       }
-      
+
       final response = await query.order('created_at', ascending: false);
       return (response as List).cast<Map<String, dynamic>>();
     } catch (e) {
@@ -620,10 +625,12 @@ class SupabaseService {
       return [];
     }
   }
-  
+
   // ========== REAL-TIME SUBSCRIPTIONS ==========
-  
-  RealtimeChannel? subscribeToAssessments(Function(Map<String, dynamic>) callback) {
+
+  RealtimeChannel? subscribeToAssessments(
+    Function(Map<String, dynamic>) callback,
+  ) {
     if (!isAvailable) return null;
     return client!
         .channel('assessments')
@@ -636,4 +643,3 @@ class SupabaseService {
         .subscribe();
   }
 }
-

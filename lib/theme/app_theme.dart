@@ -13,25 +13,27 @@ class AppTheme {
   static const Color softPurple = Color(0xFFF3E5F5);
   static const Color softYellow = Color(0xFFFFFDE7);
   static const Color skyBlue = Color(0xFFE3F2FD);
-  
+
   // Main colors
-  static const Color primaryColor = Color(0xFFFF9EC7);  // Soft pink
-  static const Color secondaryColor = Color(0xFFA0D8B3);  // Mint green
-  static const Color accentColor = Color(0xFFFFD89C);  // Warm peach
-  static const Color backgroundColor = Color(0xFFFAF7F9);  // Very soft pink-white
-  
+  static const Color primaryColor = Color(0xFFFF9EC7); // Soft pink
+  static const Color secondaryColor = Color(0xFFA0D8B3); // Mint green
+  static const Color accentColor = Color(0xFFFFD89C); // Warm peach
+  static const Color backgroundColor = Color(
+    0xFFFAF7F9,
+  ); // Very soft pink-white
+
   // Dark shades for text
   static const Color textDark = Color(0xFF2D3748);
   static const Color textMedium = Color(0xFF4A5568);
   static const Color textGrey = Color(0xFF718096);
   static const Color textLight = Color(0xFFA0AEC0);
-  
+
   // Status colors (pastel versions)
   static const Color successGreen = Color(0xFF81C995);
   static const Color warningOrange = Color(0xFFFFB84D);
   static const Color errorRed = Color(0xFFFF8A8A);
   static const Color infoBlue = Color(0xFF8AB4F8);
-  
+
   // Surface colors
   static const Color surfaceWhite = Color(0xFFFFFFFF);
   static const Color cardWhite = Color(0xFFFFFBFD);
@@ -43,7 +45,7 @@ class AppTheme {
     end: Alignment.bottomRight,
     colors: [Color(0xFFFFC1E3), Color(0xFFFFE5F0)],
   );
-  
+
   static const LinearGradient greenGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
@@ -67,7 +69,7 @@ class AppTheme {
     end: Alignment.bottomRight,
     colors: [Color(0xFF93C5FD), Color(0xFFDCEEFF)],
   );
-  
+
   // Background gradient
   static const LinearGradient backgroundGradient = LinearGradient(
     begin: Alignment.topLeft,
@@ -79,90 +81,94 @@ class AppTheme {
   // BACKWARD COMPATIBILITY ALIASES
   // ========================================
   // These maintain compatibility with existing code
-  static const Color primaryBlue = Color(0xFFFF9EC7);  // Maps to primaryColor (soft pink)
-  static const Color lightBlue = Color(0xFFA0D8B3);  // Maps to secondaryColor (mint green)
-  static const Color accentGreen = successGreen;  // Maps to successGreen
-  static const Color warningYellow = warningOrange;  // Maps to warningOrange
+  static const Color primaryBlue = Color(
+    0xFFFF9EC7,
+  ); // Maps to primaryColor (soft pink)
+  static const Color lightBlue = Color(
+    0xFFA0D8B3,
+  ); // Maps to secondaryColor (mint green)
+  static const Color accentGreen = successGreen; // Maps to successGreen
+  static const Color warningYellow = warningOrange; // Maps to warningOrange
   // infoBlue already defined above
-  
+
   // Gradient alias
   static const LinearGradient primaryGradient = pinkGradient;
 
   // Text Styles
   static TextStyle get displayLarge => GoogleFonts.poppins(
-        fontSize: 36,
-        fontWeight: FontWeight.bold,
-        color: textDark,
-        letterSpacing: -0.5,
-      );
+    fontSize: 36,
+    fontWeight: FontWeight.bold,
+    color: textDark,
+    letterSpacing: -0.5,
+  );
 
   static TextStyle get headingLarge => GoogleFonts.poppins(
-        fontSize: 32,
-        fontWeight: FontWeight.bold,
-        color: textDark,
-        letterSpacing: -0.5,
-      );
+    fontSize: 32,
+    fontWeight: FontWeight.bold,
+    color: textDark,
+    letterSpacing: -0.5,
+  );
 
   static TextStyle get headingMedium => GoogleFonts.poppins(
-        fontSize: 24,
-        fontWeight: FontWeight.w600,
-        color: textDark,
-        letterSpacing: -0.3,
-      );
+    fontSize: 24,
+    fontWeight: FontWeight.w600,
+    color: textDark,
+    letterSpacing: -0.3,
+  );
 
   static TextStyle get headingSmall => GoogleFonts.poppins(
-        fontSize: 20,
-        fontWeight: FontWeight.w600,
-        color: textDark,
-      );
+    fontSize: 20,
+    fontWeight: FontWeight.w600,
+    color: textDark,
+  );
 
   static TextStyle get titleLarge => GoogleFonts.poppins(
-        fontSize: 18,
-        fontWeight: FontWeight.w600,
-        color: textDark,
-      );
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    color: textDark,
+  );
 
   static TextStyle get bodyLarge => GoogleFonts.inter(
-        fontSize: 16,
-        fontWeight: FontWeight.normal,
-        color: textMedium,
-        height: 1.5,
-      );
+    fontSize: 16,
+    fontWeight: FontWeight.normal,
+    color: textMedium,
+    height: 1.5,
+  );
 
   static TextStyle get bodyMedium => GoogleFonts.inter(
-        fontSize: 14,
-        fontWeight: FontWeight.normal,
-        color: textMedium,
-        height: 1.5,
-      );
+    fontSize: 14,
+    fontWeight: FontWeight.normal,
+    color: textMedium,
+    height: 1.5,
+  );
 
   static TextStyle get bodySmall => GoogleFonts.inter(
-        fontSize: 12,
-        fontWeight: FontWeight.normal,
-        color: textGrey,
-        height: 1.5,
-      );
+    fontSize: 12,
+    fontWeight: FontWeight.normal,
+    color: textGrey,
+    height: 1.5,
+  );
 
   static TextStyle get labelLarge => GoogleFonts.inter(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        color: textDark,
-        letterSpacing: 0.1,
-      );
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    color: textDark,
+    letterSpacing: 0.1,
+  );
 
   static TextStyle get labelMedium => GoogleFonts.inter(
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-        color: textDark,
-        letterSpacing: 0.1,
-      );
+    fontSize: 12,
+    fontWeight: FontWeight.w600,
+    color: textDark,
+    letterSpacing: 0.1,
+  );
 
   static TextStyle get labelSmall => GoogleFonts.inter(
-        fontSize: 10,
-        fontWeight: FontWeight.w600,
-        color: textGrey,
-        letterSpacing: 0.1,
-      );
+    fontSize: 10,
+    fontWeight: FontWeight.w600,
+    color: textGrey,
+    letterSpacing: 0.1,
+  );
 
   // Theme Data
   static ThemeData get lightTheme {
@@ -175,11 +181,10 @@ class AppTheme {
         secondary: secondaryColor,
         tertiary: accentColor,
         surface: backgroundColor,
-        background: backgroundColor,
         error: errorRed,
       ),
       scaffoldBackgroundColor: backgroundColor,
-      
+
       // App Bar Theme
       appBarTheme: AppBarTheme(
         backgroundColor: surfaceWhite,
@@ -198,10 +203,8 @@ class AppTheme {
       cardTheme: CardThemeData(
         color: surfaceWhite,
         elevation: 0,
-        shadowColor: Colors.black.withOpacity(0.05),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
+        shadowColor: Colors.black.withValues(alpha: 0.05),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       ),
 
@@ -270,15 +273,12 @@ class AppTheme {
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: errorRed, width: 1.5),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-        labelStyle: GoogleFonts.inter(
-          fontSize: 14,
-          color: textGrey,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 18,
         ),
-        hintStyle: GoogleFonts.inter(
-          fontSize: 14,
-          color: textLight,
-        ),
+        labelStyle: GoogleFonts.inter(fontSize: 14, color: textGrey),
+        hintStyle: GoogleFonts.inter(fontSize: 14, color: textLight),
       ),
 
       // Chip Theme
@@ -290,9 +290,7 @@ class AppTheme {
           fontWeight: FontWeight.w500,
         ),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
 
       // Bottom Navigation Bar Theme
@@ -335,15 +333,15 @@ class AppTheme {
 
       // Switch Theme
       switchTheme: SwitchThemeData(
-        thumbColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
             return primaryColor;
           }
           return textLight;
         }),
-        trackColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
-            return primaryColor.withOpacity(0.5);
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return primaryColor.withValues(alpha: 0.5);
           }
           return dividerColor;
         }),
@@ -353,38 +351,38 @@ class AppTheme {
 
   // Custom Shadows
   static List<BoxShadow> get softShadow => [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.04),
-          blurRadius: 20,
-          offset: const Offset(0, 4),
-          spreadRadius: 0,
-        ),
-      ];
+    BoxShadow(
+      color: Colors.black.withValues(alpha: 0.04),
+      blurRadius: 20,
+      offset: const Offset(0, 4),
+      spreadRadius: 0,
+    ),
+  ];
 
   static List<BoxShadow> get mediumShadow => [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.06),
-          blurRadius: 24,
-          offset: const Offset(0, 6),
-          spreadRadius: 0,
-        ),
-      ];
+    BoxShadow(
+      color: Colors.black.withValues(alpha: 0.06),
+      blurRadius: 24,
+      offset: const Offset(0, 6),
+      spreadRadius: 0,
+    ),
+  ];
 
   static List<BoxShadow> get cardShadow => [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.04),
-          blurRadius: 16,
-          offset: const Offset(0, 4),
-        ),
-      ];
+    BoxShadow(
+      color: Colors.black.withValues(alpha: 0.04),
+      blurRadius: 16,
+      offset: const Offset(0, 4),
+    ),
+  ];
 
   static List<BoxShadow> get buttonShadow => [
-        BoxShadow(
-          color: textDark.withOpacity(0.15),
-          blurRadius: 12,
-          offset: const Offset(0, 4),
-        ),
-      ];
+    BoxShadow(
+      color: textDark.withValues(alpha: 0.15),
+      blurRadius: 12,
+      offset: const Offset(0, 4),
+    ),
+  ];
 
   // Custom Decorations
   static BoxDecoration pinkCardDecoration = BoxDecoration(
@@ -403,7 +401,7 @@ class AppTheme {
     gradient: beigeGradient,
     borderRadius: BorderRadius.circular(24),
     boxShadow: softShadow,
-      );
+  );
 
   static BoxDecoration purpleCardDecoration = BoxDecoration(
     gradient: purpleGradient,
@@ -443,7 +441,7 @@ class AppTheme {
       case 'writing':
         return const LinearGradient(
           colors: [Color(0xFFFFF9C4), Color(0xFFFFFDE7)],
-      );
+        );
       case 'math':
         return purpleGradient;
       case 'chemistry':

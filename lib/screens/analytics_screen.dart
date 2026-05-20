@@ -17,7 +17,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   Map<String, dynamic>? _dashboardStats;
   List<Map<String, dynamic>>? _monthlyTrends;
   bool _isLoading = true;
-  String _selectedPeriod = 'week'; // 'week', 'month', 'year'
 
   @override
   void initState() {
@@ -38,9 +37,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading analytics: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading analytics: $e')));
       }
     }
   }
@@ -60,37 +59,37 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _dashboardStats == null
-              ? const Center(child: Text('No data available'))
-              : RefreshIndicator(
-                  onRefresh: _loadAnalytics,
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Summary Cards
-                        _buildSummaryCards(),
-                        const SizedBox(height: 24),
-                        
-                        // Activity Chart
-                        _buildActivityChart(),
-                        const SizedBox(height: 24),
-                        
-                        // Capacity Distribution
-                        _buildCapacityDistribution(),
-                        const SizedBox(height: 24),
-                        
-                        // Monthly Trends
-                        if (_monthlyTrends != null && _monthlyTrends!.isNotEmpty)
-                          _buildMonthlyTrends(),
-                        const SizedBox(height: 24),
-                        
-                        // Top Assessors
-                        _buildTopAssessors(),
-                      ],
-                    ),
-                  ),
+          ? const Center(child: Text('No data available'))
+          : RefreshIndicator(
+              onRefresh: _loadAnalytics,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Summary Cards
+                    _buildSummaryCards(),
+                    const SizedBox(height: 24),
+
+                    // Activity Chart
+                    _buildActivityChart(),
+                    const SizedBox(height: 24),
+
+                    // Capacity Distribution
+                    _buildCapacityDistribution(),
+                    const SizedBox(height: 24),
+
+                    // Monthly Trends
+                    if (_monthlyTrends != null && _monthlyTrends!.isNotEmpty)
+                      _buildMonthlyTrends(),
+                    const SizedBox(height: 24),
+
+                    // Top Assessors
+                    _buildTopAssessors(),
+                  ],
                 ),
+              ),
+            ),
     );
   }
 
@@ -144,7 +143,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -154,7 +158,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [color.withOpacity(0.8), color],
+            colors: [color.withValues(alpha: 0.8), color],
           ),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
@@ -163,7 +167,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon, color: Colors.white, size: 22),
@@ -187,7 +191,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     title,
                     style: GoogleFonts.inter(
                       fontSize: 11,
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -202,17 +206,15 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   }
 
   Widget _buildActivityChart() {
-    final recentActivity = _dashboardStats!['recentActivity'] as Map<DateTime, int>;
+    final recentActivity =
+        _dashboardStats!['recentActivity'] as Map<DateTime, int>;
     if (recentActivity.isEmpty) {
       return const SizedBox.shrink();
     }
 
     final entries = recentActivity.entries.toList();
     final spots = entries.asMap().entries.map((entry) {
-      return FlSpot(
-        entry.key.toDouble(),
-        entry.value.value.toDouble(),
-      );
+      return FlSpot(entry.key.toDouble(), entry.value.value.toDouble());
     }).toList();
 
     return Card(
@@ -282,7 +284,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       dotData: FlDotData(show: true),
                       belowBarData: BarAreaData(
                         show: true,
-                        color: AppTheme.primaryColor.withOpacity(0.1),
+                        color: AppTheme.primaryColor.withValues(alpha: 0.1),
                       ),
                     ),
                   ],
@@ -298,7 +300,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   Color _getCapacityColor(String key) {
     final lower = key.toLowerCase();
     if (lower.contains('has capacity')) return Colors.green;
-    if (lower.contains('lacks capacity') || lower.contains('needs 100%')) return Colors.red;
+    if (lower.contains('lacks capacity') || lower.contains('needs 100%')) {
+      return Colors.red;
+    }
     if (lower.contains('fluctuating')) return Colors.orange;
     if (lower.contains('dsm-5')) return AppTheme.infoBlue;
     if (lower.contains('mhca')) return AppTheme.warningOrange;
@@ -306,7 +310,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   }
 
   Widget _buildCapacityDistribution() {
-    final capacityDist = _dashboardStats!['capacityDistribution'] as Map<String, int>;
+    final capacityDist =
+        _dashboardStats!['capacityDistribution'] as Map<String, int>;
     if (capacityDist.isEmpty) {
       return Card(
         elevation: 2,
@@ -315,10 +320,18 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           padding: const EdgeInsets.all(20),
           child: Column(
             children: [
-              Text('Capacity Distribution',
-                  style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text(
+                'Capacity Distribution',
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 20),
-              Text('No assessment data yet', style: GoogleFonts.inter(color: Colors.grey)),
+              Text(
+                'No assessment data yet',
+                style: GoogleFonts.inter(color: Colors.grey),
+              ),
             ],
           ),
         ),
@@ -458,7 +471,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                           if (value.toInt() >= recentMonths.length) {
                             return const Text('');
                           }
-                          final month = recentMonths[value.toInt()]['month'] as String;
+                          final month =
+                              recentMonths[value.toInt()]['month'] as String;
                           return Text(
                             month.substring(5),
                             style: GoogleFonts.inter(fontSize: 10),
@@ -514,7 +528,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   }
 
   Widget _buildTopAssessors() {
-    final topAssessors = _dashboardStats!['topAssessors'] as List<MapEntry<String, int>>;
+    final topAssessors =
+        _dashboardStats!['topAssessors'] as List<MapEntry<String, int>>;
     if (topAssessors.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -546,7 +561,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withOpacity(0.2),
+                        color: AppTheme.primaryColor.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                       ),
                       child: Center(
@@ -572,7 +587,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withOpacity(0.1),
+                        color: AppTheme.primaryColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -586,7 +601,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   ],
                 ),
               );
-            }).toList(),
+            }),
           ],
         ),
       ),

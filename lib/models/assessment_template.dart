@@ -19,8 +19,8 @@ class AssessmentTemplate {
     DateTime? createdAt,
     DateTime? updatedAt,
     this.questions,
-  })  : createdAt = createdAt ?? DateTime.now(),
-        updatedAt = updatedAt ?? DateTime.now();
+  }) : createdAt = createdAt ?? DateTime.now(),
+       updatedAt = updatedAt ?? DateTime.now();
 
   Map<String, dynamic> toMap() {
     return {
@@ -72,4 +72,3 @@ class AssessmentTemplate {
     );
   }
 }
-

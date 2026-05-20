@@ -17,17 +17,17 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
   final _formKey = GlobalKey<FormState>();
   final _pageController = PageController();
   final DatabaseService _databaseService = DatabaseService();
-  
+
   // Form controllers
   final _patientIdController = TextEditingController();
   final _decisionContextController = TextEditingController();
   final _recommendationsController = TextEditingController();
-  
+
   DateTime _assessmentDate = DateTime.now();
   String _assessorName = '';
   String _assessorRole = '';
   String _overallCapacity = '';
-  
+
   List<Question> _questions = [];
   final Map<String, QuestionResponse> _responses = {};
   int _currentPage = 0;
@@ -70,7 +70,9 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_overallCapacity.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select overall capacity assessment')),
+        const SnackBar(
+          content: Text('Please select overall capacity assessment'),
+        ),
       );
       return;
     }
@@ -81,7 +83,7 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
       // Get the logged-in doctor's user ID
       final prefs = await SharedPreferences.getInstance();
       final assessorUserId = prefs.getString('user_id');
-      
+
       final assessment = Assessment(
         patientId: _patientIdController.text,
         patientName: 'Anonymised', // Privacy: No names stored
@@ -98,7 +100,7 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
       );
 
       await _databaseService.insertAssessment(assessment);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Assessment saved successfully')),
@@ -107,9 +109,9 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving assessment: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error saving assessment: $e')));
       }
     } finally {
       setState(() => _isLoading = false);
@@ -134,10 +136,7 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
-                  : const Text(
-                      'Save',
-                      style: TextStyle(color: Colors.white),
-                    ),
+                  : const Text('Save', style: TextStyle(color: Colors.white)),
             ),
         ],
       ),
@@ -220,7 +219,9 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
           ListTile(
             leading: const Icon(Icons.calendar_today),
             title: const Text('Assessment Date'),
-            subtitle: Text(DateFormat('EEEE, MMMM d, y').format(_assessmentDate)),
+            subtitle: Text(
+              DateFormat('EEEE, MMMM d, y').format(_assessmentDate),
+            ),
             onTap: () async {
               final date = await showDatePicker(
                 context: context,
@@ -299,16 +300,10 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
           children: [
             Text(
               question.text,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
             if (question.required)
-              const Text(
-                ' *',
-                style: TextStyle(color: Colors.red),
-              ),
+              const Text(' *', style: TextStyle(color: Colors.red)),
             const SizedBox(height: 12),
             _buildQuestionInput(question),
           ],
@@ -320,64 +315,52 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
   Widget _buildQuestionInput(Question question) {
     switch (question.type) {
       case QuestionType.yesNo:
-        return Row(
-          children: [
-            Expanded(
-              child: RadioListTile<String>(
-                title: const Text('Yes'),
-                value: 'Yes',
-                groupValue: _responses[question.questionId]?.answer,
-                onChanged: (value) {
-                  setState(() {
-                    _responses[question.questionId] = QuestionResponse(
-                      questionId: question.questionId,
-                      answer: value,
-                    );
-                  });
-                },
+        return RadioGroup<String>(
+          groupValue: _responses[question.questionId]?.answer?.toString(),
+          onChanged: (value) {
+            setState(() {
+              _responses[question.questionId] = QuestionResponse(
+                questionId: question.questionId,
+                answer: value,
+              );
+            });
+          },
+          child: const Row(
+            children: [
+              Expanded(
+                child: RadioListTile<String>(title: Text('Yes'), value: 'Yes'),
               ),
-            ),
-            Expanded(
-              child: RadioListTile<String>(
-                title: const Text('No'),
-                value: 'No',
-                groupValue: _responses[question.questionId]?.answer,
-                onChanged: (value) {
-                  setState(() {
-                    _responses[question.questionId] = QuestionResponse(
-                      questionId: question.questionId,
-                      answer: value,
-                    );
-                  });
-                },
+              Expanded(
+                child: RadioListTile<String>(title: Text('No'), value: 'No'),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       case QuestionType.multipleChoice:
-        return Column(
-          children: question.options!.map((option) {
-            return RadioListTile<String>(
-              title: Text(option),
-              value: option,
-                groupValue: _responses[question.questionId]?.answer,
-              onChanged: (value) {
-                setState(() {
-                  _responses[question.questionId] = QuestionResponse(
-                    questionId: question.questionId,
-                    answer: value,
-                  );
-                });
-              },
-            );
-          }).toList(),
+        return RadioGroup<String>(
+          groupValue: _responses[question.questionId]?.answer?.toString(),
+          onChanged: (value) {
+            setState(() {
+              _responses[question.questionId] = QuestionResponse(
+                questionId: question.questionId,
+                answer: value,
+              );
+            });
+          },
+          child: Column(
+            children: question.options!.map((option) {
+              return RadioListTile<String>(title: Text(option), value: option);
+            }).toList(),
+          ),
         );
       case QuestionType.textInput:
         return TextFormField(
+          initialValue: _responses[question.questionId]?.answer?.toString(),
+          maxLines: 3,
           decoration: const InputDecoration(
             hintText: 'Enter your response...',
+            border: OutlineInputBorder(),
           ),
-          maxLines: 3,
           onChanged: (value) {
             _responses[question.questionId] = QuestionResponse(
               questionId: question.questionId,
@@ -385,20 +368,57 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
             );
           },
         );
-      default:
-        return const SizedBox();
+      case QuestionType.scale:
+        return RadioGroup<String>(
+          groupValue: _responses[question.questionId]?.answer?.toString(),
+          onChanged: (value) {
+            setState(() {
+              _responses[question.questionId] = QuestionResponse(
+                questionId: question.questionId,
+                answer: value,
+              );
+            });
+          },
+          child: Column(
+            children: question.options!.map((option) {
+              return RadioListTile<String>(title: Text(option), value: option);
+            }).toList(),
+          ),
+        );
+      case QuestionType.date:
+        return TextFormField(
+          initialValue: _responses[question.questionId]?.answer?.toString(),
+          decoration: const InputDecoration(
+            hintText: 'Enter date...',
+            border: OutlineInputBorder(),
+            suffixIcon: Icon(Icons.calendar_today),
+          ),
+          onChanged: (value) {
+            _responses[question.questionId] = QuestionResponse(
+              questionId: question.questionId,
+              answer: value,
+            );
+          },
+        );
     }
   }
 
   Widget _buildSummaryPage() {
     // Calculate domain scores from responses
-    final responseMap = _responses.map((key, value) => MapEntry(key, value.toMap()));
+    final responseMap = _responses.map(
+      (key, value) => MapEntry(key, value.toMap()),
+    );
     final scoreData = AssessmentQuestions.calculateCapacityScore(responseMap);
     final domainScores = scoreData['categoryScores'] as Map<String, int>? ?? {};
-    final flaggedDomains = AssessmentQuestions.getDomainsRequiringFollowUp(domainScores);
+    final flaggedDomains = AssessmentQuestions.getDomainsRequiringFollowUp(
+      domainScores,
+    );
     final percentage = scoreData['percentage'] as double;
-    final recommendations = AssessmentQuestions.getRecommendations(percentage, domainScores);
-    
+    final recommendations = AssessmentQuestions.getRecommendations(
+      percentage,
+      domainScores,
+    );
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -409,7 +429,7 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
-          
+
           // DSM-5 Domain Scores Card
           Card(
             color: Colors.blue.shade50,
@@ -440,12 +460,17 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
                     children: domainScores.entries.map((entry) {
                       final isFlagged = flaggedDomains.contains(entry.key);
                       return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: isFlagged ? Colors.red.shade100 : Colors.white,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: isFlagged ? Colors.red.shade400 : Colors.grey.shade300,
+                            color: isFlagged
+                                ? Colors.red.shade400
+                                : Colors.grey.shade300,
                           ),
                         ),
                         child: Column(
@@ -455,7 +480,9 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w500,
-                                color: isFlagged ? Colors.red.shade800 : Colors.grey.shade700,
+                                color: isFlagged
+                                    ? Colors.red.shade800
+                                    : Colors.grey.shade700,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -464,7 +491,9 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
-                                color: isFlagged ? Colors.red.shade700 : Colors.blue.shade700,
+                                color: isFlagged
+                                    ? Colors.red.shade700
+                                    : Colors.blue.shade700,
                               ),
                             ),
                             if (isFlagged)
@@ -492,14 +521,17 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
                     child: const Text(
                       'Scoring: 0=None, 1=Slight, 2=Mild, 3=Moderate, 4=Severe\n'
                       'Flagged: Substance Use/Psychosis/Suicidal Ideation ≥1, Others ≥2',
-                      style: TextStyle(fontSize: 10, fontStyle: FontStyle.italic),
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontStyle: FontStyle.italic,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
           ),
-          
+
           // Flagged Domains Alert
           if (flaggedDomains.isNotEmpty) ...[
             const SizedBox(height: 16),
@@ -525,21 +557,32 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
                       ],
                     ),
                     const SizedBox(height: 8),
-                    ...flaggedDomains.map((domain) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2),
-                      child: Row(
-                        children: [
-                          Icon(Icons.arrow_right, size: 16, color: Colors.red.shade600),
-                          Expanded(child: Text(domain, style: const TextStyle(fontSize: 13))),
-                        ],
+                    ...flaggedDomains.map(
+                      (domain) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.arrow_right,
+                              size: 16,
+                              color: Colors.red.shade600,
+                            ),
+                            Expanded(
+                              child: Text(
+                                domain,
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    )),
+                    ),
                   ],
                 ),
               ),
             ),
           ],
-          
+
           // System Recommendations
           if (recommendations.isNotEmpty) ...[
             const SizedBox(height: 16),
@@ -552,7 +595,10 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.lightbulb_outline, color: Colors.orange.shade700),
+                        Icon(
+                          Icons.lightbulb_outline,
+                          color: Colors.orange.shade700,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           'Clinical Recommendations',
@@ -565,24 +611,34 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
                       ],
                     ),
                     const SizedBox(height: 8),
-                    ...recommendations.map((rec) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('• ', style: TextStyle(fontWeight: FontWeight.bold)),
-                          Expanded(child: Text(rec, style: const TextStyle(fontSize: 13))),
-                        ],
+                    ...recommendations.map(
+                      (rec) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              '• ',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            Expanded(
+                              child: Text(
+                                rec,
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    )),
+                    ),
                   ],
                 ),
               ),
             ),
           ],
-          
+
           const SizedBox(height: 24),
-          
+
           // Overall Capacity Assessment
           Card(
             child: Padding(
@@ -592,10 +648,7 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
                 children: [
                   const Text(
                     'Overall Capacity Assessment',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -603,16 +656,23 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
                     style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                   ),
                   const SizedBox(height: 12),
-                  ...AssessmentQuestions.getCapacityOptions().map((option) {
-                    return RadioListTile<String>(
-                      title: Text(option),
-                      value: option,
-                      groupValue: _overallCapacity,
-                      onChanged: (value) {
-                        setState(() => _overallCapacity = value!);
-                      },
-                    );
-                  }),
+                  RadioGroup<String>(
+                    groupValue: _overallCapacity,
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() => _overallCapacity = value);
+                    },
+                    child: Column(
+                      children: AssessmentQuestions.getCapacityOptions().map((
+                        option,
+                      ) {
+                        return RadioListTile<String>(
+                          title: Text(option),
+                          value: option,
+                        );
+                      }).toList(),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -622,7 +682,8 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
             controller: _recommendationsController,
             decoration: const InputDecoration(
               labelText: 'Additional Recommendations and Next Steps',
-              helperText: 'Include any additional recommendations beyond system suggestions',
+              helperText:
+                  'Include any additional recommendations beyond system suggestions',
             ),
             maxLines: 4,
             validator: (value) {
@@ -635,10 +696,7 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
           const SizedBox(height: 24),
           const Text(
             'Review Information',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           Card(
@@ -648,7 +706,9 @@ class _NewAssessmentScreenState extends State<NewAssessmentScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Anonymised ID: ${_patientIdController.text}'),
-                  Text('Date: ${DateFormat('MMMM d, y').format(_assessmentDate)}'),
+                  Text(
+                    'Date: ${DateFormat('MMMM d, y').format(_assessmentDate)}',
+                  ),
                   Text('Assessor: $_assessorName'),
                   Text('Decision: ${_decisionContextController.text}'),
                 ],

@@ -1,7 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/assessment.dart';
-import '../models/question.dart';
 import '../models/user.dart';
 import 'supabase_service.dart';
 
@@ -104,12 +104,18 @@ class DatabaseService {
     if (oldVersion < 2) {
       // Add new columns for version 2
       try {
-        await db.execute('ALTER TABLE assessments ADD COLUMN patient_user_id TEXT');
-        await db.execute('ALTER TABLE assessments ADD COLUMN assessor_user_id TEXT');
-        await db.execute('ALTER TABLE assessments ADD COLUMN status TEXT DEFAULT "pending"');
+        await db.execute(
+          'ALTER TABLE assessments ADD COLUMN patient_user_id TEXT',
+        );
+        await db.execute(
+          'ALTER TABLE assessments ADD COLUMN assessor_user_id TEXT',
+        );
+        await db.execute(
+          'ALTER TABLE assessments ADD COLUMN status TEXT DEFAULT "pending"',
+        );
         await db.execute('ALTER TABLE assessments ADD COLUMN reviewed_by TEXT');
         await db.execute('ALTER TABLE assessments ADD COLUMN reviewed_at TEXT');
-        
+
         await db.execute('''
           CREATE TABLE IF NOT EXISTS questions(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -144,7 +150,9 @@ class DatabaseService {
 
     if (oldVersion < 3) {
       try {
-        await db.execute('ALTER TABLE assessments ADD COLUMN is_synced INTEGER DEFAULT 0');
+        await db.execute(
+          'ALTER TABLE assessments ADD COLUMN is_synced INTEGER DEFAULT 0',
+        );
       } catch (e) {
         // Column might already exist
       }
@@ -156,11 +164,13 @@ class DatabaseService {
     try {
       // 1. Insert locally first (offline-first)
       final id = await db.insert('assessments', assessment.toMap());
-      
+
       // 2. Try to sync to Supabase if available
       try {
         if (SupabaseService.isAvailable) {
-          final supabaseId = await SupabaseService().insertAssessment(assessment);
+          final supabaseId = await SupabaseService().insertAssessment(
+            assessment,
+          );
           if (supabaseId != null) {
             // Update local record to synced
             await db.update(
@@ -173,12 +183,12 @@ class DatabaseService {
         }
       } catch (e) {
         // Silent failure for sync - will be picked up by background sync later
-        print('Sync failed: $e');
+        debugPrint('Sync failed: $e');
       }
-      
+
       return id;
     } catch (e) {
-      print('Insert failed: $e');
+      debugPrint('Insert failed: $e');
       return -1;
     }
   }
@@ -186,10 +196,10 @@ class DatabaseService {
   Future<void> syncPendingAssessments() async {
     final db = await database;
     try {
-      print('🔄 SYNC: Starting syncPendingAssessments...');
-      
+      debugPrint('SYNC: Starting syncPendingAssessments...');
+
       if (!SupabaseService.isAvailable) {
-        print('❌ SYNC: Supabase is NOT available. Skipping sync.');
+        debugPrint('SYNC: Supabase is NOT available. Skipping sync.');
         return;
       }
 
@@ -198,17 +208,21 @@ class DatabaseService {
         'assessments',
         where: 'is_synced = 0 OR is_synced IS NULL',
       );
-      
-      print('🔄 SYNC: Found ${maps.length} unsynced assessments');
+
+      debugPrint('SYNC: Found ${maps.length} unsynced assessments');
 
       for (var map in maps) {
         final assessment = Assessment.fromMap(map);
         try {
-          print('🔄 SYNC: Attempting to sync assessment ${assessment.id}...');
-          final supabaseId = await SupabaseService().insertAssessment(assessment);
-          
+          debugPrint('SYNC: Attempting to sync assessment ${assessment.id}...');
+          final supabaseId = await SupabaseService().insertAssessment(
+            assessment,
+          );
+
           if (supabaseId != null) {
-            print('✅ SYNC: Assessment ${assessment.id} synced to Supabase (ID: $supabaseId)');
+            debugPrint(
+              'SYNC: Assessment ${assessment.id} synced to Supabase (ID: $supabaseId)',
+            );
             await db.update(
               'assessments',
               {'is_synced': 1},
@@ -216,21 +230,25 @@ class DatabaseService {
               whereArgs: [assessment.id],
             );
           } else {
-             print('❌ SYNC: Failed to sync assessment ${assessment.id} - Insert returned null');
+            debugPrint(
+              'SYNC: Failed to sync assessment ${assessment.id} - Insert returned null',
+            );
           }
         } catch (e) {
-          print('❌ SYNC: Exception syncing assessment ${assessment.id}: $e');
+          debugPrint('SYNC: Exception syncing assessment ${assessment.id}: $e');
         }
       }
     } catch (e) {
-      print('❌ SYNC: Critical Error: $e');
+      debugPrint('SYNC: Critical Error: $e');
     }
   }
 
   Future<List<Assessment>> getAllAssessments() async {
     final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query('assessments',
-        orderBy: 'assessment_date DESC');
+    final List<Map<String, dynamic>> maps = await db.query(
+      'assessments',
+      orderBy: 'assessment_date DESC',
+    );
     return List.generate(maps.length, (i) => Assessment.fromMap(maps[i]));
   }
 
@@ -259,11 +277,7 @@ class DatabaseService {
 
   Future<int> deleteAssessment(int id) async {
     final db = await database;
-    return await db.delete(
-      'assessments',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    return await db.delete('assessments', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<List<Assessment>> searchAssessments(String query) async {
@@ -333,7 +347,9 @@ class DatabaseService {
     );
   }
 
-  Future<List<Assessment>> getAssessmentsByPatientId(String patientUserId) async {
+  Future<List<Assessment>> getAssessmentsByPatientId(
+    String patientUserId,
+  ) async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
       'assessments',
@@ -355,7 +371,9 @@ class DatabaseService {
     return List.generate(maps.length, (i) => Assessment.fromMap(maps[i]));
   }
 
-  Future<List<Assessment>> getAssessmentsByAssessorId(String assessorUserId) async {
+  Future<List<Assessment>> getAssessmentsByAssessorId(
+    String assessorUserId,
+  ) async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
       'assessments',

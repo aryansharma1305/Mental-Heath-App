@@ -8,17 +8,13 @@ import '../models/user_role.dart';
 import '../services/database_service.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
-import 'new_assessment_screen.dart';
 import 'assessment_list_screen.dart';
 import 'assessment_detail_screen.dart';
-import 'patient_assessment_screen.dart';
-import 'select_assessment_screen.dart';
 import 'doctor_review_screen.dart';
 import 'admin_panel_screen.dart';
 import 'profile_screen.dart';
 import 'analytics_screen.dart';
 import 'help_support_screen.dart';
-import 'doctor_dashboard_screen.dart';
 import 'dsm5_assessment_screen.dart';
 import 'dsm5_responses_screen.dart';
 import 'mhca_assessment_screen.dart';
@@ -34,7 +30,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final DatabaseService _databaseService = DatabaseService();
   final AuthService _authService = AuthService();
-  
+
   String _userName = '';
   UserRole _userRole = UserRole.patient;
   List<Assessment> _recentAssessments = [];
@@ -117,8 +113,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     if (confirm == true) {
       await _authService.logout();
-    if (mounted) {
-      Navigator.pushReplacementNamed(context, '/login');
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/login');
       }
     }
   }
@@ -134,14 +130,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           physics: const BouncingScrollPhysics(),
           slivers: [
             // Custom App Bar
-            SliverToBoxAdapter(
-              child: _buildHeader(),
-            ),
-            
+            SliverToBoxAdapter(child: _buildHeader()),
+
             // Main Content
-            SliverToBoxAdapter(
-              child: _buildMainContent(size),
-            ),
+            SliverToBoxAdapter(child: _buildMainContent(size)),
           ],
         ),
       ),
@@ -149,13 +141,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       floatingActionButton: _buildFloatingButton(),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
-              }
+  }
 
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
+      child: Row(
+        children: [
           // Avatar with gradient border
           Container(
             decoration: BoxDecoration(
@@ -178,30 +170,33 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ).animate().scale(delay: 200.ms, duration: 600.ms),
           const SizedBox(width: 16),
-          
+
           // Greeting
           Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
                   'Hello $_userName',
                   style: GoogleFonts.poppins(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
                     color: AppTheme.textDark,
-                        ),
+                  ),
                 ).animate().fadeIn().slideX(begin: -0.2, end: 0),
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
-                        gradient: _userRole == UserRole.admin 
+                        gradient: _userRole == UserRole.admin
                             ? AppTheme.purpleGradient
                             : _userRole.isHealthcareProfessional
-                                ? AppTheme.blueGradient
-                                : AppTheme.greenGradient,
+                            ? AppTheme.blueGradient
+                            : AppTheme.greenGradient,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -216,9 +211,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ],
                 ).animate().fadeIn(delay: 200.ms),
               ],
-                        ),
-                      ),
-          
+            ),
+          ),
+
           // Notification Icon
           Container(
             decoration: BoxDecoration(
@@ -244,13 +239,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         minHeight: 8,
                       ),
                     ),
-                      ),
-                    ],
                   ),
+                ],
+              ),
               onPressed: () {
                 // TODO: Show notifications
               },
-              ),
+            ),
           ).animate().scale(delay: 400.ms),
         ],
       ),
@@ -286,7 +281,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Icon(
@@ -300,13 +295,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                            Text(
-                              '${AppLocalizations.of(context)!.doctorWelcome},',
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                color: Colors.white.withOpacity(0.9),
-                              ),
-                            ),
+                        Text(
+                          '${AppLocalizations.of(context)!.doctorWelcome},',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: Colors.white.withValues(alpha: 0.9),
+                          ),
+                        ),
                         Text(
                           DateFormat('EEEE, MMMM d, y').format(DateTime.now()),
                           style: GoogleFonts.poppins(
@@ -322,9 +317,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
             ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.3, end: 0),
           ),
-          
+
           const SizedBox(height: 32),
-          
+
           // Quick Actions Header
           Text(
             'Quick Actions',
@@ -334,35 +329,35 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               color: AppTheme.textDark,
             ),
           ).animate().fadeIn(delay: 400.ms),
-          
+
           const SizedBox(height: 16),
-          
+
           // Floating Action Cards
           _buildFloatingActionCards(),
-          
-              const SizedBox(height: 32),
+
+          const SizedBox(height: 32),
 
           // Recent Activity Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    AppLocalizations.of(context)!.recentActivity,
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textDark,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                AppLocalizations.of(context)!.recentActivity,
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textDark,
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AssessmentListScreen(),
                     ),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const AssessmentListScreen(),
-                        ),
-                      );
-                    },
+                  );
+                },
                 child: Text(
                   'View All',
                   style: GoogleFonts.inter(
@@ -371,15 +366,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     color: AppTheme.primaryColor,
                   ),
                 ),
-                  ),
-                ],
+              ),
+            ],
           ).animate().fadeIn(delay: 800.ms),
-          
-              const SizedBox(height: 16),
-              
+
+          const SizedBox(height: 16),
+
           // Recent Assessments
           _buildRecentAssessments(),
-          
+
           const SizedBox(height: 100), // Space for FAB
         ],
       ),
@@ -388,7 +383,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildFloatingActionCards() {
     final actions = _getRoleBasedActions();
-    
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -407,7 +402,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           AppTheme.purpleGradient,
           AppTheme.blueGradient,
         ];
-        
+
         return _FloatingActionCard(
           gradient: gradients[index % gradients.length],
           icon: action['icon'] as IconData,
@@ -482,9 +477,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           'onTap': () {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => const ProfileScreen(),
-              ),
+              MaterialPageRoute(builder: (context) => const ProfileScreen()),
             );
           },
         },
@@ -563,9 +556,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           'onTap': () {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => const AnalyticsScreen(),
-              ),
+              MaterialPageRoute(builder: (context) => const AnalyticsScreen()),
             );
           },
         },
@@ -576,9 +567,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           'onTap': () {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => const ProfileScreen(),
-              ),
+              MaterialPageRoute(builder: (context) => const ProfileScreen()),
             );
           },
         },
@@ -593,9 +582,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           'onTap': () {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => const AdminPanelScreen(),
-              ),
+              MaterialPageRoute(builder: (context) => const AdminPanelScreen()),
             );
           },
         },
@@ -606,9 +593,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           'onTap': () {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => const AdminPanelScreen(),
-              ),
+              MaterialPageRoute(builder: (context) => const AdminPanelScreen()),
             );
           },
         },
@@ -658,9 +643,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           'onTap': () {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => const AnalyticsScreen(),
-              ),
+              MaterialPageRoute(builder: (context) => const AnalyticsScreen()),
             );
           },
         },
@@ -677,7 +660,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ),
       );
     }
-    
+
     if (_recentAssessments.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(40),
@@ -686,8 +669,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           borderRadius: BorderRadius.circular(24),
           boxShadow: AppTheme.softShadow,
         ),
-                    child: Column(
-                      children: [
+        child: Column(
+          children: [
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -696,50 +679,48 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
               child: Icon(
                 Icons.assignment_outlined,
-                          size: 48,
+                size: 48,
                 color: AppTheme.primaryColor,
               ),
-                        ),
+            ),
             const SizedBox(height: 16),
-                        Text(
-                          'No assessments yet',
+            Text(
+              'No assessments yet',
               style: GoogleFonts.poppins(
-                            fontSize: 18,
+                fontSize: 18,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.textDark,
-                          ),
-                        ),
-            const SizedBox(height: 8),
-                        Text(
-                          'Start your first assessment using the button above',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: AppTheme.textGrey,
               ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Start your first assessment using the button above',
+              style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textGrey),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ).animate().fadeIn(delay: 900.ms).scale();
     }
-    
+
     return Column(
       children: _recentAssessments.asMap().entries.map((entry) {
         final index = entry.key;
         final assessment = entry.value;
         return _AssessmentCard(
-          assessment: assessment,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => AssessmentDetailScreen(
-                                assessmentId: assessment.id!,
-                              ),
-                            ),
-                          );
-                        },
-        ).animate().fadeIn(delay: Duration(milliseconds: 900 + (index * 100)))
+              assessment: assessment,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        AssessmentDetailScreen(assessmentId: assessment.id!),
+                  ),
+                );
+              },
+            )
+            .animate()
+            .fadeIn(delay: Duration(milliseconds: 900 + (index * 100)))
             .slideX(begin: 0.2, end: 0);
       }).toList(),
     );
@@ -747,40 +728,34 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildFloatingButton() {
     return Container(
-      margin: const EdgeInsets.only(top: 30),
-      height: 64,
-      width: 64,
-      child: FloatingActionButton(
-        elevation: 8,
-        backgroundColor: AppTheme.textDark,
-        child: Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              colors: [
-                AppTheme.primaryColor,
-                AppTheme.secondaryColor,
-              ],
+          margin: const EdgeInsets.only(top: 30),
+          height: 64,
+          width: 64,
+          child: FloatingActionButton(
+            elevation: 8,
+            backgroundColor: AppTheme.textDark,
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
+                ),
+              ),
+              child: const Icon(Icons.add, size: 32, color: Colors.white),
             ),
+            onPressed: () {
+              // Always go to DSM-5 Assessment for data collection
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const DSM5AssessmentScreen(),
+                ),
+              );
+            },
           ),
-          child: const Icon(
-            Icons.add,
-            size: 32,
-            color: Colors.white,
-          ),
-        ),
-        onPressed: () {
-          // Always go to DSM-5 Assessment for data collection
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const DSM5AssessmentScreen(),
-            ),
-          );
-        },
-      ),
-    ).animate(onPlay: (controller) => controller.repeat(reverse: true))
-        .shimmer(duration: 2000.ms, color: Colors.white.withOpacity(0.3));
+        )
+        .animate(onPlay: (controller) => controller.repeat(reverse: true))
+        .shimmer(duration: 2000.ms, color: Colors.white.withValues(alpha: 0.3));
   }
 
   Widget _buildModernBottomNav() {
@@ -789,7 +764,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 20,
             offset: const Offset(0, -4),
           ),
@@ -832,16 +807,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     context,
                     MaterialPageRoute(
                       builder: (context) => const ProfileScreen(),
-                      ),
-                    );
-                  },
-                ),
+                    ),
+                  );
+                },
+              ),
               _NavBarItem(
                 icon: Icons.logout_rounded,
                 label: 'Logout',
                 isSelected: false,
                 onTap: _logout,
-                ),
+              ),
             ],
           ),
         ),
@@ -871,7 +846,7 @@ class _FloatingActionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-        onTap: onTap,
+      onTap: onTap,
       borderRadius: BorderRadius.circular(24),
       child: Container(
         decoration: BoxDecoration(
@@ -879,31 +854,27 @@ class _FloatingActionCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(24),
           boxShadow: AppTheme.softShadow,
         ),
-          padding: const EdgeInsets.all(20),
-          child: Column(
+        padding: const EdgeInsets.all(20),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
+          children: [
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 0.9),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(
-                icon,
-                size: 28,
-                color: AppTheme.textDark,
-              ),
+              child: Icon(icon, size: 28, color: AppTheme.textDark),
             ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-              Text(
-                title,
+                Text(
+                  title,
                   style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
                   maxLines: 1,
@@ -914,7 +885,7 @@ class _FloatingActionCard extends StatelessWidget {
                   subtitle,
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -933,14 +904,15 @@ class _AssessmentCard extends StatelessWidget {
   final Assessment assessment;
   final VoidCallback onTap;
 
-  const _AssessmentCard({
-    required this.assessment,
-    required this.onTap,
-  });
+  const _AssessmentCard({required this.assessment, required this.onTap});
 
   Color _getStatusColor(String status) {
-    if (status.toLowerCase().contains('has capacity')) return AppTheme.successGreen;
-    if (status.toLowerCase().contains('lacks capacity')) return AppTheme.errorRed;
+    if (status.toLowerCase().contains('has capacity')) {
+      return AppTheme.successGreen;
+    }
+    if (status.toLowerCase().contains('lacks capacity')) {
+      return AppTheme.errorRed;
+    }
     return AppTheme.warningOrange;
   }
 
@@ -966,7 +938,9 @@ class _AssessmentCard extends StatelessWidget {
                   width: 50,
                   height: 50,
                   decoration: BoxDecoration(
-                    color: _getStatusColor(assessment.overallCapacity).withOpacity(0.1),
+                    color: _getStatusColor(
+                      assessment.overallCapacity,
+                    ).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(
@@ -989,22 +963,29 @@ class _AssessmentCard extends StatelessWidget {
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                        DateFormat('MMM d, y').format(assessment.assessmentDate),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        DateFormat(
+                          'MMM d, y',
+                        ).format(assessment.assessmentDate),
                         style: GoogleFonts.inter(
-                  fontSize: 12,
+                          fontSize: 12,
                           color: AppTheme.textGrey,
-                ),
+                        ),
                       ),
                     ],
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
-                    color: _getStatusColor(assessment.overallCapacity).withOpacity(0.1),
+                    color: _getStatusColor(
+                      assessment.overallCapacity,
+                    ).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
@@ -1012,8 +993,8 @@ class _AssessmentCard extends StatelessWidget {
                     size: 14,
                     color: _getStatusColor(assessment.overallCapacity),
                   ),
-              ),
-            ],
+                ),
+              ],
             ),
           ),
         ),
@@ -1044,7 +1025,9 @@ class _NavBarItem extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : Colors.transparent,
+          color: isSelected
+              ? AppTheme.primaryColor.withValues(alpha: 0.1)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
