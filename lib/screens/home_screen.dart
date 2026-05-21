@@ -19,6 +19,7 @@ import 'dsm5_assessment_screen.dart';
 import 'dsm5_responses_screen.dart';
 import 'mhca_assessment_screen.dart';
 import 'mhca_responses_screen.dart';
+import 'patient_profiles_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -550,6 +551,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           },
         },
         {
+          'icon': Icons.folder_shared_outlined,
+          'title': 'Patient Profiles',
+          'subtitle': 'Case history',
+          'onTap': () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const PatientProfilesScreen(),
+              ),
+            );
+          },
+        },
+        {
           'icon': Icons.analytics_outlined,
           'title': 'Analytics',
           'subtitle': 'View statistics',
@@ -632,6 +646,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               context,
               MaterialPageRoute(
                 builder: (context) => const DoctorReviewScreen(),
+              ),
+            );
+          },
+        },
+        {
+          'icon': Icons.folder_shared_outlined,
+          'title': 'Patient Profiles',
+          'subtitle': 'Case history',
+          'onTap': () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const PatientProfilesScreen(),
               ),
             );
           },

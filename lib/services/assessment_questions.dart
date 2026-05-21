@@ -466,6 +466,11 @@ class AssessmentQuestions {
     return getDomainsRequiringFollowUp(domainHighestScores);
   }
 
+  static int calculateTotalScore(Map<String, dynamic> responses) {
+    final scoreData = calculateCapacityScore(responses);
+    return (scoreData['totalScore'] as int?) ?? 0;
+  }
+
   static Question? _questionForEntry({
     required String key,
     required int index,

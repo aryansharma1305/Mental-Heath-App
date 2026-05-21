@@ -2,13 +2,15 @@ import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/assessment.dart';
+import '../models/clinical_note.dart';
+import '../models/patient_profile.dart';
 import '../models/user.dart';
 import 'supabase_service.dart';
 
 class DatabaseService {
   static Database? _database;
   static const String _databaseName = 'mental_capacity_assessments.db';
-  static const int _databaseVersion = 3;
+  static const int _databaseVersion = 4;
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -28,6 +30,19 @@ class DatabaseService {
 
   Future<void> _onCreate(Database db, int version) async {
     // Assessments table
+    await db.execute('''
+      CREATE TABLE patients(
+        patient_id TEXT PRIMARY KEY,
+        display_name TEXT NOT NULL,
+        demographics_json TEXT,
+        clinical_summary TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        last_assessment_at TEXT,
+        assessment_count INTEGER DEFAULT 0
+      )
+    ''');
+
     await db.execute('''
       CREATE TABLE assessments(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -50,6 +65,21 @@ class DatabaseService {
         is_synced INTEGER DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE clinical_notes(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        patient_id TEXT NOT NULL,
+        assessment_id INTEGER,
+        note TEXT NOT NULL,
+        author_name TEXT NOT NULL,
+        author_user_id TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (patient_id) REFERENCES patients(patient_id),
+        FOREIGN KEY (assessment_id) REFERENCES assessments(id) ON DELETE SET NULL
       )
     ''');
 
@@ -157,13 +187,81 @@ class DatabaseService {
         // Column might already exist
       }
     }
+
+    if (oldVersion < 4) {
+      await _createPatientTables(db);
+      await _backfillPatientsFromAssessments(db);
+    }
+  }
+
+  Future<void> _createPatientTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS patients(
+        patient_id TEXT PRIMARY KEY,
+        display_name TEXT NOT NULL,
+        demographics_json TEXT,
+        clinical_summary TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        last_assessment_at TEXT,
+        assessment_count INTEGER DEFAULT 0
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS clinical_notes(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        patient_id TEXT NOT NULL,
+        assessment_id INTEGER,
+        note TEXT NOT NULL,
+        author_name TEXT NOT NULL,
+        author_user_id TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (patient_id) REFERENCES patients(patient_id),
+        FOREIGN KEY (assessment_id) REFERENCES assessments(id) ON DELETE SET NULL
+      )
+    ''');
+  }
+
+  Future<void> _backfillPatientsFromAssessments(Database db) async {
+    final rows = await db.rawQuery('''
+      SELECT
+        patient_id,
+        COALESCE(NULLIF(patient_name, ''), patient_id) AS display_name,
+        MIN(created_at) AS created_at,
+        MAX(assessment_date) AS last_assessment_at,
+        COUNT(*) AS assessment_count
+      FROM assessments
+      WHERE patient_id IS NOT NULL AND patient_id != ''
+      GROUP BY patient_id
+    ''');
+
+    final now = DateTime.now().toIso8601String();
+    for (final row in rows) {
+      await db.insert('patients', {
+        'patient_id': row['patient_id'],
+        'display_name': row['display_name'],
+        'created_at': row['created_at'] ?? now,
+        'updated_at': now,
+        'last_assessment_at': row['last_assessment_at'],
+        'assessment_count': row['assessment_count'] ?? 0,
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
+    }
   }
 
   Future<int> insertAssessment(Assessment assessment) async {
     final db = await database;
     try {
+      await upsertPatientFromAssessment(assessment);
+
       // 1. Insert locally first (offline-first)
       final id = await db.insert('assessments', assessment.toMap());
+      await _refreshPatientAssessmentStats(
+        db,
+        assessment.patientId,
+        assessment.assessmentDate,
+      );
 
       // 2. Try to sync to Supabase if available
       try {
@@ -191,6 +289,67 @@ class DatabaseService {
       debugPrint('Insert failed: $e');
       return -1;
     }
+  }
+
+  Future<void> upsertPatientFromAssessment(Assessment assessment) async {
+    if (assessment.patientId.trim().isEmpty) return;
+
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+    final displayName = assessment.patientName.trim().isEmpty
+        ? assessment.patientId.trim()
+        : assessment.patientName.trim();
+
+    await db.insert('patients', {
+      'patient_id': assessment.patientId.trim(),
+      'display_name': displayName,
+      'created_at': assessment.createdAt.toIso8601String(),
+      'updated_at': now,
+      'last_assessment_at': assessment.assessmentDate.toIso8601String(),
+      'assessment_count': 0,
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
+
+    await db.update(
+      'patients',
+      {
+        'display_name': displayName,
+        'updated_at': now,
+        'last_assessment_at': assessment.assessmentDate.toIso8601String(),
+      },
+      where: 'patient_id = ?',
+      whereArgs: [assessment.patientId.trim()],
+    );
+  }
+
+  Future<void> _refreshPatientAssessmentStats(
+    Database db,
+    String patientId,
+    DateTime fallbackLastAssessment,
+  ) async {
+    if (patientId.trim().isEmpty) return;
+
+    final stats = await db.rawQuery(
+      '''
+      SELECT COUNT(*) AS assessment_count, MAX(assessment_date) AS last_assessment_at
+      FROM assessments
+      WHERE patient_id = ?
+      ''',
+      [patientId.trim()],
+    );
+
+    final row = stats.isNotEmpty ? stats.first : <String, Object?>{};
+    await db.update(
+      'patients',
+      {
+        'assessment_count': row['assessment_count'] ?? 0,
+        'last_assessment_at':
+            row['last_assessment_at'] ??
+            fallbackLastAssessment.toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      where: 'patient_id = ?',
+      whereArgs: [patientId.trim()],
+    );
   }
 
   Future<void> syncPendingAssessments() async {
@@ -252,6 +411,65 @@ class DatabaseService {
     return List.generate(maps.length, (i) => Assessment.fromMap(maps[i]));
   }
 
+  Future<List<PatientProfile>> getAllPatients() async {
+    final db = await database;
+    final maps = await db.query(
+      'patients',
+      orderBy: 'last_assessment_at DESC, updated_at DESC',
+    );
+    return maps.map(PatientProfile.fromMap).toList();
+  }
+
+  Future<PatientProfile?> getPatient(String patientId) async {
+    final db = await database;
+    final maps = await db.query(
+      'patients',
+      where: 'patient_id = ?',
+      whereArgs: [patientId],
+      limit: 1,
+    );
+    if (maps.isEmpty) return null;
+    return PatientProfile.fromMap(maps.first);
+  }
+
+  Future<int> upsertPatient(PatientProfile patient) async {
+    final db = await database;
+    return db.insert(
+      'patients',
+      patient.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<Assessment>> getAssessmentsByPatientCode(String patientId) async {
+    final db = await database;
+    final maps = await db.query(
+      'assessments',
+      where: 'patient_id = ?',
+      whereArgs: [patientId],
+      orderBy: 'assessment_date DESC',
+    );
+    return maps.map(Assessment.fromMap).toList();
+  }
+
+  Future<List<ClinicalNote>> getClinicalNotesForPatient(
+    String patientId,
+  ) async {
+    final db = await database;
+    final maps = await db.query(
+      'clinical_notes',
+      where: 'patient_id = ?',
+      whereArgs: [patientId],
+      orderBy: 'created_at DESC',
+    );
+    return maps.map(ClinicalNote.fromMap).toList();
+  }
+
+  Future<int> insertClinicalNote(ClinicalNote note) async {
+    final db = await database;
+    return db.insert('clinical_notes', note.toMap());
+  }
+
   Future<Assessment?> getAssessment(int id) async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
@@ -277,7 +495,25 @@ class DatabaseService {
 
   Future<int> deleteAssessment(int id) async {
     final db = await database;
-    return await db.delete('assessments', where: 'id = ?', whereArgs: [id]);
+    final assessment = await getAssessment(id);
+    final deleted = await db.transaction((txn) async {
+      await txn.update(
+        'clinical_notes',
+        {'assessment_id': null, 'updated_at': DateTime.now().toIso8601String()},
+        where: 'assessment_id = ?',
+        whereArgs: [id],
+      );
+      return txn.delete('assessments', where: 'id = ?', whereArgs: [id]);
+    });
+
+    if (assessment != null) {
+      await _refreshPatientAssessmentStats(
+        db,
+        assessment.patientId,
+        assessment.assessmentDate,
+      );
+    }
+    return deleted;
   }
 
   Future<List<Assessment>> searchAssessments(String query) async {

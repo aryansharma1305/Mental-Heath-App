@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mental_capacity_assessment/models/assessment.dart';
+import 'package:mental_capacity_assessment/models/clinical_note.dart';
+import 'package:mental_capacity_assessment/models/patient_profile.dart';
 import 'package:mental_capacity_assessment/services/assessment_questions.dart';
 
 void main() {
@@ -112,6 +114,43 @@ void main() {
 
       expect(highestScores['VI. Suicidal Ideation'], 1);
       expect(flagged, contains('VI. Suicidal Ideation'));
+    });
+  });
+
+  group('Patient profile foundation', () {
+    test('patient profiles parse persisted stats safely', () {
+      final patient = PatientProfile.fromMap({
+        'patient_id': 'P001',
+        'display_name': 'Anonymised',
+        'created_at': 'bad-date',
+        'updated_at': DateTime.now().toIso8601String(),
+        'last_assessment_at': DateTime.now().toIso8601String(),
+        'assessment_count': '3',
+      });
+
+      expect(patient.patientId, 'P001');
+      expect(patient.displayName, 'Anonymised');
+      expect(patient.assessmentCount, 3);
+      expect(patient.createdAt, isA<DateTime>());
+    });
+
+    test('clinical notes keep patient and assessment linkage', () {
+      final now = DateTime.now();
+      final note = ClinicalNote(
+        id: 7,
+        patientId: 'P001',
+        assessmentId: 42,
+        note: 'Capacity discussion included family collateral.',
+        authorName: 'Dr Smith',
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      final parsed = ClinicalNote.fromMap(note.toMap());
+
+      expect(parsed.patientId, 'P001');
+      expect(parsed.assessmentId, 42);
+      expect(parsed.note, contains('family collateral'));
     });
   });
 }
