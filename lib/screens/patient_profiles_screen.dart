@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../models/assessment.dart';
 import '../models/clinical_note.dart';
 import '../models/patient_profile.dart';
+import '../models/risk_level.dart';
 import '../services/assessment_questions.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
@@ -23,6 +24,7 @@ class _PatientProfilesScreenState extends State<PatientProfilesScreen> {
   final DatabaseService _databaseService = DatabaseService();
   final TextEditingController _searchController = TextEditingController();
   List<PatientProfile> _patients = [];
+  Map<String, RiskLevel> _riskByPatient = {};
   String _query = '';
   bool _isLoading = true;
 
@@ -40,9 +42,11 @@ class _PatientProfilesScreenState extends State<PatientProfilesScreen> {
 
   Future<void> _loadPatients() async {
     final patients = await _databaseService.getAllPatients();
+    final riskByPatient = await _databaseService.getWorstRiskLevelsByPatient();
     if (!mounted) return;
     setState(() {
       _patients = patients;
+      _riskByPatient = riskByPatient;
       _isLoading = false;
     });
   }
@@ -159,6 +163,7 @@ class _PatientProfilesScreenState extends State<PatientProfilesScreen> {
     final lastSeen = patient.lastAssessmentAt == null
         ? 'No assessments yet'
         : DateFormat('dd MMM yyyy').format(patient.lastAssessmentAt!);
+    final riskLevel = _riskByPatient[patient.patientId] ?? RiskLevel.low;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 14),
@@ -182,7 +187,15 @@ class _PatientProfilesScreenState extends State<PatientProfilesScreen> {
           '${patient.assessmentCount} assessments • Last: $lastSeen',
           style: GoogleFonts.inter(),
         ),
-        trailing: const Icon(Icons.chevron_right),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            _riskBadge(riskLevel),
+            const SizedBox(height: 6),
+            const Icon(Icons.chevron_right, size: 18),
+          ],
+        ),
         onTap: () async {
           await Navigator.push(
             context,
@@ -195,6 +208,10 @@ class _PatientProfilesScreenState extends State<PatientProfilesScreen> {
         },
       ),
     );
+  }
+
+  Widget _riskBadge(RiskLevel riskLevel) {
+    return riskBadge(riskLevel);
   }
 }
 
@@ -391,7 +408,14 @@ class _PatientProfileDetailScreenState
                   subtitle: Text(
                     '${assessment.overallCapacity} • ${DateFormat('dd MMM yyyy HH:mm').format(assessment.assessmentDate)}',
                   ),
-                  trailing: const Icon(Icons.chevron_right),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _riskBadge(assessment.riskLevel),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.chevron_right),
+                    ],
+                  ),
                   onTap: assessment.id == null
                       ? null
                       : () {
@@ -488,6 +512,10 @@ class _PatientProfileDetailScreenState
     );
   }
 
+  Widget _riskBadge(RiskLevel riskLevel) {
+    return riskBadge(riskLevel);
+  }
+
   List<_TrendPoint> _dsm5Trend() {
     final dsm5 =
         _assessments
@@ -559,4 +587,23 @@ class _TrendPoint {
   final int score;
 
   const _TrendPoint({required this.date, required this.score});
+}
+
+Widget riskBadge(RiskLevel riskLevel) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+    decoration: BoxDecoration(
+      color: riskLevel.background,
+      borderRadius: BorderRadius.circular(999),
+      border: Border.all(color: riskLevel.color.withValues(alpha: 0.18)),
+    ),
+    child: Text(
+      riskLevel.label,
+      style: GoogleFonts.inter(
+        color: riskLevel.color,
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+      ),
+    ),
+  );
 }
