@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../models/assessment.dart';
 import '../models/clinical_note.dart';
+import '../models/consent_basis.dart';
 import '../models/patient_profile.dart';
 import '../models/risk_level.dart';
 import '../services/assessment_questions.dart';
@@ -404,13 +405,31 @@ class _PatientProfileDetailScreenState
               children: _assessments.map((assessment) {
                 return ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text(assessment.decisionContext),
+                  leading: assessment.isRefused
+                      ? Icon(Icons.block, color: ConsentBasis.refused.color)
+                      : null,
+                  title: Text(
+                    assessment.decisionContext,
+                    style: TextStyle(
+                      fontWeight: assessment.isRefused
+                          ? FontWeight.w800
+                          : FontWeight.w500,
+                    ),
+                  ),
                   subtitle: Text(
-                    '${assessment.overallCapacity} • ${DateFormat('dd MMM yyyy HH:mm').format(assessment.assessmentDate)}',
+                    assessment.isRefused
+                        ? '${DateFormat('dd MMM yyyy HH:mm').format(assessment.assessmentDate)} • ${assessment.consentNotes ?? 'No refusal notes recorded'}'
+                        : '${assessment.overallCapacity} • ${DateFormat('dd MMM yyyy HH:mm').format(assessment.assessmentDate)}',
+                    maxLines: assessment.isRefused ? 3 : 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      if (assessment.consentBasis != null) ...[
+                        _consentBadge(assessment.consentBasis!),
+                        const SizedBox(width: 8),
+                      ],
                       _riskBadge(assessment.riskLevel),
                       const SizedBox(width: 8),
                       const Icon(Icons.chevron_right),
@@ -516,6 +535,10 @@ class _PatientProfileDetailScreenState
     return riskBadge(riskLevel);
   }
 
+  Widget _consentBadge(ConsentBasis consentBasis) {
+    return consentBadge(consentBasis);
+  }
+
   List<_TrendPoint> _dsm5Trend() {
     final dsm5 =
         _assessments
@@ -601,6 +624,25 @@ Widget riskBadge(RiskLevel riskLevel) {
       riskLevel.label,
       style: GoogleFonts.inter(
         color: riskLevel.color,
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+      ),
+    ),
+  );
+}
+
+Widget consentBadge(ConsentBasis consentBasis) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+    decoration: BoxDecoration(
+      color: consentBasis.background,
+      borderRadius: BorderRadius.circular(999),
+      border: Border.all(color: consentBasis.color.withValues(alpha: 0.18)),
+    ),
+    child: Text(
+      consentBasis == ConsentBasis.refused ? 'REFUSED' : consentBasis.label,
+      style: GoogleFonts.inter(
+        color: consentBasis.color,
         fontSize: 12,
         fontWeight: FontWeight.w800,
       ),
