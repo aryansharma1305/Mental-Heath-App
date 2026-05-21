@@ -8,6 +8,7 @@ import 'package:mental_capacity_assessment/models/consent_record.dart';
 import 'package:mental_capacity_assessment/models/patient_profile.dart';
 import 'package:mental_capacity_assessment/models/risk_level.dart';
 import 'package:mental_capacity_assessment/services/assessment_questions.dart';
+import 'package:mental_capacity_assessment/services/encryption_service.dart';
 import 'package:mental_capacity_assessment/services/risk_stratification_service.dart';
 
 void main() {
@@ -281,6 +282,17 @@ void main() {
         RiskStratificationService.computeForAssessment(assessment),
         RiskLevel.moderate,
       );
+    });
+  });
+
+  group('Encryption key generation', () {
+    test('generates a 32-byte url-safe database key', () {
+      final key = EncryptionService.generateKey();
+
+      expect(key, isNotEmpty);
+      expect(key, isNot(contains('+')));
+      expect(key, isNot(contains('/')));
+      expect(base64Url.decode(key), hasLength(32));
     });
   });
 }

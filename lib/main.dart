@@ -8,6 +8,7 @@ import 'package:mental_capacity_assessment/l10n/app_localizations.dart';
 import 'screens/simple_splash_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
+import 'services/app_lock_service.dart';
 import 'services/database_service.dart';
 import 'services/language_service.dart';
 import 'theme/app_theme.dart';
@@ -117,24 +118,66 @@ class MentalCapacityAssessmentApp extends StatefulWidget {
     state?.setLocale(newLocale);
   }
 
+  static void lockNow(BuildContext context) {
+    final state = context
+        .findAncestorStateOfType<_MentalCapacityAssessmentAppState>();
+    state?.lockNow();
+  }
+
   @override
   State<MentalCapacityAssessmentApp> createState() =>
       _MentalCapacityAssessmentAppState();
 }
 
 class _MentalCapacityAssessmentAppState
-    extends State<MentalCapacityAssessmentApp> {
+    extends State<MentalCapacityAssessmentApp>
+    with WidgetsBindingObserver {
   Locale? _locale;
+  final AppLockService _appLockService = AppLockService();
+  DateTime? _backgroundedAt;
+  bool _locked = true;
+  bool _authenticating = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadSavedLocale();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _unlockIfRequired());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _backgroundedAt = DateTime.now();
+    }
+    if (state == AppLifecycleState.resumed) {
+      _lockAfterResumeTimeout();
+    }
+  }
+
+  Future<void> _lockAfterResumeTimeout() async {
+    final backgroundedAt = _backgroundedAt;
+    if (backgroundedAt == null) return;
+    final timeout = await _appLockService.getLockTimeoutSeconds();
+    if (timeout < 0) return;
+    final elapsed = DateTime.now().difference(backgroundedAt);
+    if (elapsed.inSeconds >= timeout) {
+      await lockNow();
+    }
   }
 
   Future<void> _loadSavedLocale() async {
     final langService = LanguageService();
     await langService.init();
+    if (!mounted) return;
     setState(() {
       _locale = langService.currentLanguage.locale;
     });
@@ -143,6 +186,29 @@ class _MentalCapacityAssessmentAppState
   void setLocale(Locale locale) {
     setState(() {
       _locale = locale;
+    });
+  }
+
+  Future<void> lockNow() async {
+    if (!mounted) return;
+    setState(() => _locked = true);
+    await _unlockIfRequired();
+  }
+
+  Future<void> _unlockIfRequired() async {
+    if (_authenticating || !mounted) return;
+    final enabled = await _appLockService.isLockEnabled();
+    if (!enabled) {
+      if (mounted) setState(() => _locked = false);
+      return;
+    }
+
+    setState(() => _authenticating = true);
+    final unlocked = await _appLockService.authenticate();
+    if (!mounted) return;
+    setState(() {
+      _locked = !unlocked;
+      _authenticating = false;
     });
   }
 
@@ -164,7 +230,12 @@ class _MentalCapacityAssessmentAppState
         Locale('ta'), // Tamil
         Locale('hi'), // Hindi
       ],
-      home: const SimpleSplashScreen(),
+      home: _locked
+          ? _LockScreen(
+              authenticating: _authenticating,
+              onUnlock: () => _unlockIfRequired(),
+            )
+          : const SimpleSplashScreen(),
       routes: {
         '/home': (context) => const HomeScreen(),
         '/login': (context) => const LoginScreen(),
@@ -179,6 +250,66 @@ class _MentalCapacityAssessmentAppState
           child: child!,
         );
       },
+    );
+  }
+}
+
+class _LockScreen extends StatelessWidget {
+  final bool authenticating;
+  final Future<void> Function() onUnlock;
+
+  const _LockScreen({required this.authenticating, required this.onUnlock});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 88,
+                height: 88,
+                decoration: BoxDecoration(
+                  gradient: AppTheme.primaryGradient,
+                  borderRadius: BorderRadius.circular(28),
+                ),
+                child: const Icon(
+                  Icons.lock_outline,
+                  color: Colors.white,
+                  size: 42,
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Mental Capacity Assessment is locked',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Authenticate to access clinical records.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: authenticating ? null : onUnlock,
+                icon: authenticating
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.fingerprint),
+                label: Text(authenticating ? 'Authenticating...' : 'Unlock'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

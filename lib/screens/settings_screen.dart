@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../theme/app_theme.dart';
 import '../services/language_service.dart';
+import '../services/app_lock_service.dart';
 import '../main.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -21,6 +22,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _registrationNo = '';
   AppLanguage _selectedLanguage = AppLanguage.english;
   int _totalAssessments = 0;
+  bool _appLockEnabled = true;
+  int _lockTimeoutSeconds = AppLockService.defaultTimeoutSeconds;
+  final AppLockService _appLockService = AppLockService();
 
   @override
   void initState() {
@@ -32,6 +36,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final prefs = await SharedPreferences.getInstance();
     final langService = LanguageService();
     await langService.init();
+    final appLockEnabled = await _appLockService.isLockEnabled();
+    final lockTimeout = await _appLockService.getLockTimeoutSeconds();
 
     // Load doctor profile
     final doctorJson = prefs.getString('doctor_profile');
@@ -55,7 +61,60 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _selectedLanguage = langService.currentLanguage;
       _totalAssessments = assessments.length;
+      _appLockEnabled = appLockEnabled;
+      _lockTimeoutSeconds = lockTimeout;
     });
+  }
+
+  Future<void> _setAppLockEnabled(bool enabled) async {
+    await _appLockService.setLockEnabled(enabled);
+    setState(() => _appLockEnabled = enabled);
+  }
+
+  Future<void> _setLockTimeout(int seconds) async {
+    await _appLockService.setLockTimeoutSeconds(seconds);
+    setState(() => _lockTimeoutSeconds = seconds);
+  }
+
+  Future<void> _showLockTimeoutDialog() async {
+    final selected = await showDialog<int>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Lock timeout'),
+        children: [
+          RadioGroup<int>(
+            groupValue: _lockTimeoutSeconds,
+            onChanged: (value) => Navigator.pop(context, value),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _timeoutOption('30 seconds', 30),
+                _timeoutOption('60 seconds', 60),
+                _timeoutOption('5 minutes', 300),
+                _timeoutOption('Never', -1),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+    if (selected != null) {
+      await _setLockTimeout(selected);
+    }
+  }
+
+  Widget _timeoutOption(String label, int seconds) {
+    return RadioListTile<int>(value: seconds, title: Text(label));
+  }
+
+  String get _lockTimeoutLabel {
+    return switch (_lockTimeoutSeconds) {
+      30 => '30 seconds',
+      60 => '60 seconds',
+      300 => '5 minutes',
+      -1 => 'Never',
+      _ => '$_lockTimeoutSeconds seconds',
+    };
   }
 
   Future<void> _changeLanguage(AppLanguage language) async {
@@ -357,6 +416,74 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
             ).animate().fadeIn(delay: 100.ms),
+
+            const SizedBox(height: 24),
+
+            Text(
+              'Security',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textDark,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: AppTheme.softShadow,
+              ),
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: _appLockEnabled,
+                    onChanged: _setAppLockEnabled,
+                    secondary: Icon(
+                      Icons.fingerprint,
+                      color: AppTheme.primaryColor,
+                    ),
+                    title: Text(
+                      'Biometric / device lock',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: const Text('Require authentication on app open'),
+                  ),
+                  const Divider(),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      Icons.timer_outlined,
+                      color: AppTheme.primaryColor,
+                    ),
+                    title: Text(
+                      'Lock timeout',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(_lockTimeoutLabel),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: _showLockTimeoutDialog,
+                  ),
+                  const Divider(),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      Icons.lock_outline,
+                      color: AppTheme.primaryColor,
+                    ),
+                    title: Text(
+                      'Lock now',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: const Text('Immediately require authentication'),
+                    onTap: () => MentalCapacityAssessmentApp.lockNow(context),
+                  ),
+                ],
+              ),
+            ).animate().fadeIn(delay: 200.ms),
 
             const SizedBox(height: 24),
 

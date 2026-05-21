@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_sqlcipher/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/assessment.dart';
 import '../models/clinical_note.dart';
@@ -8,6 +8,7 @@ import '../models/consent_record.dart';
 import '../models/patient_profile.dart';
 import '../models/risk_level.dart';
 import '../models/user.dart';
+import 'encryption_service.dart';
 import 'risk_stratification_service.dart';
 import 'supabase_service.dart';
 
@@ -24,8 +25,10 @@ class DatabaseService {
 
   Future<Database> _initDatabase() async {
     String path = join(await getDatabasesPath(), _databaseName);
+    final key = await EncryptionService().getDatabaseKey();
     return await openDatabase(
       path,
+      password: key,
       version: _databaseVersion,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
