@@ -48,3 +48,6 @@ app.*.map.json
 .env
 .env.local
 .env.*.local
+
+# Non-app patent drafting artifacts
+patent_figures/
