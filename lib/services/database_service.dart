@@ -16,7 +16,7 @@ import 'supabase_service.dart';
 class DatabaseService {
   static Database? _database;
   static const String _databaseName = 'mental_capacity_assessments.db';
-  static const int _databaseVersion = 7;
+  static const int _databaseVersion = 8;
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -79,6 +79,7 @@ class DatabaseService {
         consent_recorded_at TEXT,
         consent_recorded_by TEXT,
         assessment_status TEXT DEFAULT 'active',
+        prior_assessment_id INTEGER,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )
@@ -221,6 +222,10 @@ class DatabaseService {
     if (oldVersion < 7) {
       await _ensureRecommendationsJsonColumn(db);
     }
+
+    if (oldVersion < 8) {
+      await _ensurePriorAssessmentColumn(db);
+    }
   }
 
   Future<void> _ensureRiskLevelColumn(Database db) async {
@@ -253,6 +258,16 @@ class DatabaseService {
     try {
       await db.execute(
         'ALTER TABLE assessments ADD COLUMN recommendations_json TEXT',
+      );
+    } catch (e) {
+      // Column might already exist.
+    }
+  }
+
+  Future<void> _ensurePriorAssessmentColumn(Database db) async {
+    try {
+      await db.execute(
+        'ALTER TABLE assessments ADD COLUMN prior_assessment_id INTEGER',
       );
     } catch (e) {
       // Column might already exist.
@@ -335,10 +350,14 @@ class DatabaseService {
     final db = await database;
     try {
       _validateAssessmentForInsert(assessment);
+      final priorAssessmentId =
+          assessment.priorAssessmentId ??
+          await _findPriorAssessmentId(db, assessment);
       final assessmentWithRisk = assessment.copyWith(
         riskLevel: assessment.isRefused
             ? assessment.riskLevel
             : RiskStratificationService.computeForAssessment(assessment),
+        priorAssessmentId: priorAssessmentId,
       );
 
       await upsertPatientFromAssessment(assessmentWithRisk);
@@ -548,6 +567,29 @@ class DatabaseService {
     }
   }
 
+  Future<int?> _findPriorAssessmentId(
+    Database db,
+    Assessment assessment,
+  ) async {
+    if (assessment.patientId.trim().isEmpty) return null;
+    final maps = await db.query(
+      'assessments',
+      columns: ['id'],
+      where:
+          'patient_id = ? AND decision_context = ? AND assessment_date < ? AND assessment_status != ?',
+      whereArgs: [
+        assessment.patientId.trim(),
+        assessment.decisionContext,
+        assessment.assessmentDate.toIso8601String(),
+        'refused',
+      ],
+      orderBy: 'assessment_date DESC',
+      limit: 1,
+    );
+    if (maps.isEmpty) return null;
+    return maps.first['id'] as int?;
+  }
+
   Future<List<Assessment>> getAllAssessments() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
@@ -598,6 +640,15 @@ class DatabaseService {
     return maps.map(Assessment.fromMap).toList();
   }
 
+  Future<Assessment?> getPriorAssessmentFor(Assessment assessment) async {
+    if (assessment.priorAssessmentId != null) {
+      return getAssessment(assessment.priorAssessmentId!);
+    }
+    final db = await database;
+    final priorId = await _findPriorAssessmentId(db, assessment);
+    return priorId == null ? null : getAssessment(priorId);
+  }
+
   Future<Map<String, RiskLevel>> getWorstRiskLevelsByPatient() async {
     final db = await database;
     final rows = await db.query(
@@ -625,6 +676,19 @@ class DatabaseService {
       'clinical_notes',
       where: 'patient_id = ?',
       whereArgs: [patientId],
+      orderBy: 'created_at DESC',
+    );
+    return maps.map(ClinicalNote.fromMap).toList();
+  }
+
+  Future<List<ClinicalNote>> getClinicalNotesForAssessment(
+    int assessmentId,
+  ) async {
+    final db = await database;
+    final maps = await db.query(
+      'clinical_notes',
+      where: 'assessment_id = ?',
+      whereArgs: [assessmentId],
       orderBy: 'created_at DESC',
     );
     return maps.map(ClinicalNote.fromMap).toList();

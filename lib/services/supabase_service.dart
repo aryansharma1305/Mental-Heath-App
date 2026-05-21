@@ -210,6 +210,7 @@ class SupabaseService {
                 ?.toIso8601String(),
             'consent_recorded_by': assessment.consentRecordedBy,
             'assessment_status': assessment.assessmentStatus,
+            'prior_assessment_id': assessment.priorAssessmentId,
             'status': assessment.status ?? 'pending',
           })
           .select()
@@ -274,6 +275,7 @@ class SupabaseService {
               ?.toIso8601String(),
           'consent_recorded_by': assessment.consentRecordedBy,
           'assessment_status': assessment.assessmentStatus,
+          'prior_assessment_id': assessment.priorAssessmentId,
           'status': assessment.status ?? 'pending',
           'reviewed_by': assessment.reviewedBy,
           'reviewed_at': assessment.reviewedAt?.toIso8601String(),

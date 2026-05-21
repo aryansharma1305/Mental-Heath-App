@@ -71,6 +71,7 @@ CREATE TABLE assessments (
     consent_recorded_at TIMESTAMPTZ,
     consent_recorded_by TEXT,
     assessment_status TEXT DEFAULT 'active' CHECK (assessment_status IN ('active', 'refused', 'completed')),
+    prior_assessment_id INTEGER REFERENCES assessments(id) ON DELETE SET NULL,
     status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'reviewed', 'completed', 'archived')),
     reviewed_by UUID REFERENCES users(id),
     reviewed_at TIMESTAMPTZ,

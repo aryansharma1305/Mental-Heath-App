@@ -31,6 +31,7 @@ class Assessment {
   final DateTime? consentRecordedAt;
   final String? consentRecordedBy;
   final String assessmentStatus; // 'active', 'refused', 'completed'
+  final int? priorAssessmentId;
 
   bool get isRefused => assessmentStatus == 'refused';
 
@@ -73,6 +74,7 @@ class Assessment {
     this.consentRecordedAt,
     this.consentRecordedBy,
     String? assessmentStatus,
+    this.priorAssessmentId,
   }) : structuredRecommendations =
            structuredRecommendations ??
            AssessmentRecommendations.fromStorage(null),
@@ -108,6 +110,7 @@ class Assessment {
       'consent_recorded_at': consentRecordedAt?.toIso8601String(),
       'consent_recorded_by': consentRecordedBy,
       'assessment_status': assessmentStatus,
+      'prior_assessment_id': priorAssessmentId,
     };
   }
 
@@ -142,6 +145,7 @@ class Assessment {
       consentNotes: map['consent_notes'] as String?,
       consentRecordedAt: _parseDate(map['consent_recorded_at']),
       consentRecordedBy: map['consent_recorded_by'] as String?,
+      priorAssessmentId: _parseInt(map['prior_assessment_id']),
       assessmentStatus:
           map['assessment_status']?.toString() ??
           (map['status'] == 'completed' || map['status'] == 'refused'
@@ -177,6 +181,7 @@ class Assessment {
     DateTime? consentRecordedAt,
     String? consentRecordedBy,
     String? assessmentStatus,
+    int? priorAssessmentId,
   }) {
     return Assessment(
       id: id ?? this.id,
@@ -206,6 +211,7 @@ class Assessment {
       consentRecordedAt: consentRecordedAt ?? this.consentRecordedAt,
       consentRecordedBy: consentRecordedBy ?? this.consentRecordedBy,
       assessmentStatus: assessmentStatus ?? this.assessmentStatus,
+      priorAssessmentId: priorAssessmentId ?? this.priorAssessmentId,
     );
   }
 
@@ -243,6 +249,13 @@ class Assessment {
     if (value is String && value.isNotEmpty) {
       return DateTime.tryParse(value);
     }
+    return null;
+  }
+
+  static int? _parseInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value);
     return null;
   }
 }

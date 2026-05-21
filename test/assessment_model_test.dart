@@ -318,6 +318,20 @@ void main() {
       },
     );
 
+    test('stores prior assessment linkage for reproducible trend reports', () {
+      final assessment = _assessmentWith(
+        responses: const {},
+        decisionContext: 'DSM-5 Assessment',
+        overallCapacity: 'Moderate symptoms',
+        priorAssessmentId: 41,
+      );
+
+      final parsed = Assessment.fromMap(assessment.toMap());
+
+      expect(parsed.priorAssessmentId, 41);
+      expect(parsed.toMap()['prior_assessment_id'], 41);
+    });
+
     test('parses legacy recommendation text as free text fallback', () {
       final recommendations = AssessmentRecommendations.fromStorage(
         'Continue routine monitoring',
@@ -346,6 +360,7 @@ Assessment _assessmentWith({
   required String overallCapacity,
   String recommendations = '',
   AssessmentRecommendations? structuredRecommendations,
+  int? priorAssessmentId,
 }) {
   final now = DateTime.now();
   return Assessment(
@@ -359,6 +374,7 @@ Assessment _assessmentWith({
     overallCapacity: overallCapacity,
     recommendations: recommendations,
     structuredRecommendations: structuredRecommendations,
+    priorAssessmentId: priorAssessmentId,
     createdAt: now,
     updatedAt: now,
   );

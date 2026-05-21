@@ -24,6 +24,27 @@ pw.Widget pdfSectionHeader(String title) {
   );
 }
 
+pw.Widget pdfSubheading(String text) {
+  return pw.Padding(
+    padding: const pw.EdgeInsets.only(top: 8, bottom: 4),
+    child: pw.Text(
+      text,
+      style: pw.TextStyle(
+        fontSize: PdfTheme.bodySize,
+        fontWeight: pw.FontWeight.bold,
+        color: PdfTheme.bodyText,
+      ),
+    ),
+  );
+}
+
+pw.Widget pdfBodyText(String text) {
+  return pw.Text(
+    text,
+    style: pw.TextStyle(fontSize: PdfTheme.bodySize, color: PdfTheme.bodyText),
+  );
+}
+
 pw.Widget pdfField(String label, String value) {
   return pw.Padding(
     padding: const pw.EdgeInsets.only(top: PdfTheme.fieldGap),
@@ -55,6 +76,13 @@ pw.Widget pdfField(String label, String value) {
   );
 }
 
+pw.Widget pdfDivider() {
+  return pw.Padding(
+    padding: const pw.EdgeInsets.symmetric(vertical: 8),
+    child: pw.Container(height: 1, color: PdfTheme.divider),
+  );
+}
+
 pw.Widget pdfSection(List<pw.Widget> children) {
   return pw.Padding(
     padding: const pw.EdgeInsets.only(bottom: PdfTheme.sectionGap),
@@ -79,6 +107,31 @@ pw.Widget pdfBadge(String label, PdfColor color) {
         fontWeight: pw.FontWeight.bold,
         fontSize: PdfTheme.labelSize,
       ),
+    ),
+  );
+}
+
+pw.Widget pdfPageFooter(pw.Context context, {String? label}) {
+  return pw.Container(
+    margin: const pw.EdgeInsets.only(top: 10),
+    child: pw.Row(
+      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+      children: [
+        pw.Text(
+          label ?? 'Confidential clinical record',
+          style: pw.TextStyle(
+            fontSize: PdfTheme.footerSize,
+            color: PdfTheme.mutedText,
+          ),
+        ),
+        pw.Text(
+          'Page ${context.pageNumber} of ${context.pagesCount}',
+          style: pw.TextStyle(
+            fontSize: PdfTheme.footerSize,
+            color: PdfTheme.mutedText,
+          ),
+        ),
+      ],
     ),
   );
 }
