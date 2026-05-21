@@ -14,11 +14,12 @@ This document defines the persisted risk label used by the app for assessment tr
 - DSM-5 total score, computed from raw question-level responses using stable question IDs with legacy order fallback.
 - Triggered DSM-5 Level 2 domains, using the DSM-5 Level 1 domain threshold rules already implemented in `AssessmentQuestions`.
 - MHCA/capacity outcome, inferred from the persisted assessment outcome text.
-- Emergency basis, reserved for the consent-recording phase and currently passed as `false`.
+- Consent basis, persisted on the assessment record. `lacksCapacityEmergency` escalates to `critical`; `refused` creates a refusal-only record and defaults to `moderate` unless explicitly saved in an emergency context.
 
 ## Thresholds
 
-- Emergency basis: `critical`.
+- Consent basis `lacksCapacityEmergency`: `critical`.
+- Consent basis `refused`: refusal-only record, `moderate` by default.
 - Capacity not found plus two or more triggered Level 2 domains: `critical`.
 - Capacity not found after an MHCA/capacity assessment: `high`.
 - DSM-5 total score `>= 32`: `high`.
@@ -30,6 +31,10 @@ This document defines the persisted risk label used by the app for assessment tr
 ## Rationale
 
 The rule set intentionally combines symptom severity, follow-up burden, and capacity outcome into one triage label. That makes the label cross-instrument rather than a simple DSM-5 score colour. The stored label supports patient-level longitudinal tracking, review prioritisation, richer PDF reporting, and future consent-aware safety escalation.
+
+## Consent Refusal Records
+
+If consent is refused, the app saves a locked refusal-only assessment timeline record and stops the clinical assessment flow. Refusal notes are required at the service layer. No clinical question responses are stored for refused records. This keeps the patient timeline auditable while avoiding collection of clinical assessment data after refusal.
 
 ## Display Rules
 
