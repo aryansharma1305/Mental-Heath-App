@@ -8,6 +8,7 @@ import '../models/consent_record.dart';
 import '../models/patient_profile.dart';
 import '../models/risk_level.dart';
 import '../models/user.dart';
+import 'database_encryption_migration_service.dart';
 import 'encryption_service.dart';
 import 'risk_stratification_service.dart';
 import 'supabase_service.dart';
@@ -26,6 +27,7 @@ class DatabaseService {
   Future<Database> _initDatabase() async {
     String path = join(await getDatabasesPath(), _databaseName);
     final key = await EncryptionService().getDatabaseKey();
+    await const DatabaseEncryptionMigrationService().migrateIfNeeded(path, key);
     return await openDatabase(
       path,
       password: key,
