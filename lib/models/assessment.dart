@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'risk_level.dart';
+
 class Assessment {
   final int? id;
   final String patientId;
@@ -20,6 +22,7 @@ class Assessment {
   final int? templateId; // Assessment template ID
   final String? assessorUserId; // UUID of the doctor who created the assessment
   final bool isSynced; // Local sync status
+  final RiskLevel riskLevel;
 
   /// Generate anonymised ID for privacy-compliant reporting
   String get anonymisedId {
@@ -53,6 +56,7 @@ class Assessment {
     this.templateId,
     this.assessorUserId,
     this.isSynced = false,
+    this.riskLevel = RiskLevel.low,
   });
 
   Map<String, dynamic> toMap() {
@@ -76,6 +80,7 @@ class Assessment {
       'template_id': templateId,
       'assessor_user_id': assessorUserId,
       'is_synced': isSynced ? 1 : 0,
+      'risk_level': riskLevel.name,
     };
   }
 
@@ -102,6 +107,7 @@ class Assessment {
       templateId: map['template_id'] as int?,
       assessorUserId: map['assessor_user_id'] as String?,
       isSynced: map['is_synced'] == 1,
+      riskLevel: riskLevelFromString(map['risk_level'] as String?),
     );
   }
 
@@ -125,6 +131,7 @@ class Assessment {
     int? templateId,
     String? assessorUserId,
     bool? isSynced,
+    RiskLevel? riskLevel,
   }) {
     return Assessment(
       id: id ?? this.id,
@@ -146,6 +153,7 @@ class Assessment {
       templateId: templateId ?? this.templateId,
       assessorUserId: assessorUserId ?? this.assessorUserId,
       isSynced: isSynced ?? this.isSynced,
+      riskLevel: riskLevel ?? this.riskLevel,
     );
   }
 

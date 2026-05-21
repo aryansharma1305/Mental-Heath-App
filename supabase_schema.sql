@@ -64,6 +64,7 @@ CREATE TABLE assessments (
     responses JSONB NOT NULL DEFAULT '{}',
     overall_capacity TEXT NOT NULL,
     recommendations TEXT,
+    risk_level TEXT DEFAULT 'low',
     status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'reviewed', 'completed', 'archived')),
     reviewed_by UUID REFERENCES users(id),
     reviewed_at TIMESTAMPTZ,

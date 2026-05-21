@@ -4,13 +4,15 @@ import 'package:path/path.dart';
 import '../models/assessment.dart';
 import '../models/clinical_note.dart';
 import '../models/patient_profile.dart';
+import '../models/risk_level.dart';
 import '../models/user.dart';
+import 'risk_stratification_service.dart';
 import 'supabase_service.dart';
 
 class DatabaseService {
   static Database? _database;
   static const String _databaseName = 'mental_capacity_assessments.db';
-  static const int _databaseVersion = 4;
+  static const int _databaseVersion = 5;
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -63,6 +65,7 @@ class DatabaseService {
         doctor_notes TEXT,
         template_id INTEGER,
         is_synced INTEGER DEFAULT 0,
+        risk_level TEXT DEFAULT 'low',
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )
@@ -192,6 +195,21 @@ class DatabaseService {
       await _createPatientTables(db);
       await _backfillPatientsFromAssessments(db);
     }
+
+    if (oldVersion < 5) {
+      await _ensureRiskLevelColumn(db);
+      await _backfillRiskLevels(db);
+    }
+  }
+
+  Future<void> _ensureRiskLevelColumn(Database db) async {
+    try {
+      await db.execute(
+        'ALTER TABLE assessments ADD COLUMN risk_level TEXT DEFAULT "low"',
+      );
+    } catch (e) {
+      // Column might already exist.
+    }
   }
 
   Future<void> _createPatientTables(Database db) async {
@@ -250,24 +268,44 @@ class DatabaseService {
     }
   }
 
+  Future<void> _backfillRiskLevels(Database db) async {
+    final rows = await db.query('assessments');
+    for (final row in rows) {
+      final assessment = Assessment.fromMap(row);
+      final riskLevel = RiskStratificationService.computeForAssessment(
+        assessment,
+      );
+      await db.update(
+        'assessments',
+        {'risk_level': riskLevel.name},
+        where: 'id = ?',
+        whereArgs: [assessment.id],
+      );
+    }
+  }
+
   Future<int> insertAssessment(Assessment assessment) async {
     final db = await database;
     try {
-      await upsertPatientFromAssessment(assessment);
+      final assessmentWithRisk = assessment.copyWith(
+        riskLevel: RiskStratificationService.computeForAssessment(assessment),
+      );
+
+      await upsertPatientFromAssessment(assessmentWithRisk);
 
       // 1. Insert locally first (offline-first)
-      final id = await db.insert('assessments', assessment.toMap());
+      final id = await db.insert('assessments', assessmentWithRisk.toMap());
       await _refreshPatientAssessmentStats(
         db,
-        assessment.patientId,
-        assessment.assessmentDate,
+        assessmentWithRisk.patientId,
+        assessmentWithRisk.assessmentDate,
       );
 
       // 2. Try to sync to Supabase if available
       try {
         if (SupabaseService.isAvailable) {
           final supabaseId = await SupabaseService().insertAssessment(
-            assessment,
+            assessmentWithRisk,
           );
           if (supabaseId != null) {
             // Update local record to synced
@@ -450,6 +488,25 @@ class DatabaseService {
       orderBy: 'assessment_date DESC',
     );
     return maps.map(Assessment.fromMap).toList();
+  }
+
+  Future<Map<String, RiskLevel>> getWorstRiskLevelsByPatient() async {
+    final db = await database;
+    final rows = await db.query(
+      'assessments',
+      columns: ['patient_id', 'risk_level'],
+    );
+    final riskByPatient = <String, RiskLevel>{};
+    for (final row in rows) {
+      final patientId = (row['patient_id'] ?? '').toString();
+      if (patientId.isEmpty) continue;
+      final risk = riskLevelFromString(row['risk_level'] as String?);
+      final existing = riskByPatient[patientId];
+      if (existing == null || risk.priority > existing.priority) {
+        riskByPatient[patientId] = risk;
+      }
+    }
+    return riskByPatient;
   }
 
   Future<List<ClinicalNote>> getClinicalNotesForPatient(

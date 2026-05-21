@@ -201,6 +201,7 @@ class SupabaseService {
             'responses': assessment.responses,
             'overall_capacity': assessment.overallCapacity,
             'recommendations': assessment.recommendations,
+            'risk_level': assessment.riskLevel.name,
             'status': 'pending',
           })
           .select()
@@ -257,6 +258,7 @@ class SupabaseService {
           'responses': assessment.responses,
           'overall_capacity': assessment.overallCapacity,
           'recommendations': assessment.recommendations,
+          'risk_level': assessment.riskLevel.name,
           'status': assessment.status ?? 'pending',
           'reviewed_by': assessment.reviewedBy,
           'reviewed_at': assessment.reviewedAt?.toIso8601String(),

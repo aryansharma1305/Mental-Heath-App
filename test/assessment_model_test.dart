@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mental_capacity_assessment/models/assessment.dart';
 import 'package:mental_capacity_assessment/models/clinical_note.dart';
 import 'package:mental_capacity_assessment/models/patient_profile.dart';
+import 'package:mental_capacity_assessment/models/risk_level.dart';
 import 'package:mental_capacity_assessment/services/assessment_questions.dart';
+import 'package:mental_capacity_assessment/services/risk_stratification_service.dart';
 
 void main() {
   group('Assessment model parsing', () {
@@ -153,4 +155,89 @@ void main() {
       expect(parsed.note, contains('family collateral'));
     });
   });
+
+  group('Risk stratification', () {
+    test('stores and parses risk level on assessment records', () {
+      final assessment = Assessment.fromMap({
+        'id': 1,
+        'patient_id': 'P001',
+        'patient_name': 'Anonymised',
+        'assessment_date': DateTime.now().toIso8601String(),
+        'assessor_name': 'Doctor',
+        'assessor_role': 'doctor',
+        'decision_context': 'DSM-5 Assessment',
+        'responses': '{}',
+        'overall_capacity': 'Minimal symptoms',
+        'recommendations': '',
+        'created_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
+        'risk_level': 'high',
+        'is_synced': 0,
+      });
+
+      expect(assessment.riskLevel, RiskLevel.high);
+      expect(assessment.toMap()['risk_level'], 'high');
+    });
+
+    test('marks elevated DSM-5 total score as moderate', () {
+      expect(
+        RiskStratificationService.compute(
+          dsm5TotalScore: 16,
+          triggeredLevel2Domains: const [],
+          capacityFound: true,
+          mhcaCompleted: false,
+          isEmergencyBasis: false,
+        ),
+        RiskLevel.moderate,
+      );
+    });
+
+    test('marks MHCA no-capacity outcome as high', () {
+      final assessment = _assessmentWith(
+        responses: const {},
+        decisionContext: 'MHCA Treatment Capacity',
+        overallCapacity:
+            'Needs 100% support from nominated representative in making treatment decisions including admission',
+      );
+
+      expect(
+        RiskStratificationService.computeForAssessment(assessment),
+        RiskLevel.high,
+      );
+    });
+
+    test('emergency basis overrides to critical', () {
+      expect(
+        RiskStratificationService.compute(
+          dsm5TotalScore: 0,
+          triggeredLevel2Domains: const [],
+          capacityFound: true,
+          mhcaCompleted: false,
+          isEmergencyBasis: true,
+        ),
+        RiskLevel.critical,
+      );
+    });
+  });
+}
+
+Assessment _assessmentWith({
+  required Map<String, dynamic> responses,
+  required String decisionContext,
+  required String overallCapacity,
+}) {
+  final now = DateTime.now();
+  return Assessment(
+    patientId: 'P001',
+    patientName: 'Anonymised',
+    assessmentDate: now,
+    assessorName: 'Doctor',
+    assessorRole: 'doctor',
+    decisionContext: decisionContext,
+    responses: responses,
+    overallCapacity: overallCapacity,
+    recommendations: '',
+    createdAt: now,
+    updatedAt: now,
+  );
 }
