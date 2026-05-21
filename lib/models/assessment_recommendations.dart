@@ -77,4 +77,22 @@ class AssessmentRecommendations {
     }
     return parts.join(' | ');
   }
+
+  String toSummary() {
+    final parts = <String>[];
+    if (followUpRecommended) {
+      parts.add('Follow-up recommended');
+    }
+    if (referToSpecialist) {
+      parts.add('Refer to specialist');
+    }
+    if (noFurtherAction) {
+      parts.add('No further action');
+    }
+    final notes = freeText?.trim();
+    if (notes != null && notes.isNotEmpty) {
+      parts.add(notes);
+    }
+    return parts.join('; ');
+  }
 }

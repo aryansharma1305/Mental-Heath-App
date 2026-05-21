@@ -60,6 +60,7 @@ dependencies:
   flutter_tts: ^4.2.5
   sqflite_sqlcipher: ^3.4.0
   local_auth: ^3.0.1
+  csv: ^8.0.0
 
 dev_dependencies:
   flutter_test:

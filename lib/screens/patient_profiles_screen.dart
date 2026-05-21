@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../models/assessment.dart';
 import '../models/clinical_note.dart';
@@ -11,6 +12,7 @@ import '../models/risk_level.dart';
 import '../services/assessment_questions.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
+import '../services/export/csv_export_service.dart';
 import '../theme/app_theme.dart';
 import 'assessment_detail_screen.dart';
 
@@ -268,6 +270,13 @@ class _PatientProfileDetailScreenState
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: AppTheme.textDark,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.download_outlined),
+            tooltip: 'Export patient history as CSV',
+            onPressed: _assessments.isEmpty ? null : _exportPatientCsv,
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showAddNoteDialog,
@@ -602,6 +611,45 @@ class _PatientProfileDetailScreenState
       ),
     );
     await _loadProfile();
+  }
+
+  Future<void> _exportPatientCsv() async {
+    try {
+      final patient = _patient;
+      final patients = patient == null
+          ? <String, PatientProfile>{}
+          : {patient.patientId: patient};
+      final notesByAssessment = <int, List<ClinicalNote>>{};
+      for (final assessment in _assessments) {
+        final id = assessment.id;
+        if (id == null) continue;
+        notesByAssessment[id] = _notes
+            .where((note) => note.assessmentId == id)
+            .toList();
+      }
+
+      final file = await CsvExportService.writeCsvFile(
+        filePrefix: 'patient_${widget.patientId}_history',
+        assessments: _assessments,
+        patients: patients,
+        notesByAssessment: notesByAssessment,
+      );
+
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path)],
+          text: 'Patient history CSV export',
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('CSV export failed: $e'),
+          backgroundColor: AppTheme.errorRed,
+        ),
+      );
+    }
   }
 }
 

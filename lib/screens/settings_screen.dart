@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import '../models/clinical_note.dart';
 import '../theme/app_theme.dart';
 import '../services/language_service.dart';
 import '../services/app_lock_service.dart';
+import '../services/database_service.dart';
+import '../services/export/csv_export_service.dart';
 import '../main.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -25,6 +29,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _appLockEnabled = true;
   int _lockTimeoutSeconds = AppLockService.defaultTimeoutSeconds;
   final AppLockService _appLockService = AppLockService();
+  final DatabaseService _databaseService = DatabaseService();
 
   @override
   void initState() {
@@ -245,6 +250,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
         Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
       }
+    }
+  }
+
+  Future<void> _exportAllCsv() async {
+    try {
+      final assessments = await _databaseService.getAllAssessments();
+      final patients = {
+        for (final patient in await _databaseService.getAllPatients())
+          patient.patientId: patient,
+      };
+      final notesByAssessment = <int, List<ClinicalNote>>{};
+      for (final assessment in assessments) {
+        final id = assessment.id;
+        if (id == null) continue;
+        notesByAssessment[id] = await _databaseService
+            .getClinicalNotesForAssessment(id);
+      }
+
+      final file = await CsvExportService.writeCsvFile(
+        filePrefix: 'all_assessments_export',
+        assessments: assessments,
+        patients: patients,
+        notesByAssessment: notesByAssessment,
+      );
+
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path)],
+          text: 'All assessments CSV export',
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('CSV export failed: $e'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppTheme.errorRed,
+        ),
+      );
     }
   }
 
@@ -531,6 +576,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 color: AppTheme.textDark,
               ),
             ),
+            const SizedBox(height: 12),
+
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: AppTheme.softShadow,
+              ),
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  Icons.table_chart_outlined,
+                  color: AppTheme.primaryColor,
+                ),
+                title: Text(
+                  'Export all assessments (CSV)',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                ),
+                subtitle: const Text('For audit, research, and governance'),
+                trailing: const Icon(Icons.ios_share_outlined),
+                onTap: _exportAllCsv,
+              ),
+            ).animate().fadeIn(delay: 260.ms),
+
             const SizedBox(height: 12),
 
             GestureDetector(
