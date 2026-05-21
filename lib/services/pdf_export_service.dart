@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:intl/intl.dart';
 import '../models/assessment.dart';
+import '../models/risk_level.dart';
 import 'assessment_questions.dart';
 
 class PdfExportService {
@@ -50,6 +51,11 @@ class PdfExportService {
 
       final pdf = pw.Document();
       final anonymisedId = _generateAnonymisedId(assessment);
+
+      if (assessment.isRefused) {
+        return _exportRefusalPdf(pdf, assessment, anonymisedId);
+      }
+
       final domainHighestScores =
           AssessmentQuestions.calculateDomainHighestScores(
             assessment.responses,
@@ -143,6 +149,73 @@ class PdfExportService {
       debugPrint('Stack trace: $stackTrace');
       return null;
     }
+  }
+
+  Future<String?> _exportRefusalPdf(
+    pw.Document pdf,
+    Assessment assessment,
+    String anonymisedId,
+  ) async {
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(40),
+        build: (context) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text(
+              'Mental Capacity Assessment - Consent Refusal Record',
+              style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 24),
+            _buildInfoRow('Patient', anonymisedId),
+            _buildInfoRow(
+              'Date',
+              DateFormat(
+                'dd MMMM yyyy HH:mm',
+              ).format(assessment.assessmentDate),
+            ),
+            _buildInfoRow('Assessment type', assessment.decisionContext),
+            _buildInfoRow(
+              'Clinician',
+              assessment.consentRecordedBy ?? assessment.assessorName,
+            ),
+            _buildInfoRow(
+              'Consent basis',
+              assessment.consentBasis?.name ?? 'refused',
+            ),
+            _buildInfoRow('Risk level', assessment.riskLevel.label),
+            pw.SizedBox(height: 20),
+            pw.Text(
+              'Clinician notes:',
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 8),
+            pw.Text(assessment.consentNotes ?? 'No notes recorded.'),
+            pw.SizedBox(height: 24),
+            pw.Text(
+              'This record documents that an assessment was attempted. '
+              'The patient declined to proceed. No clinical assessment data was collected.',
+            ),
+            pw.Spacer(),
+            pw.Row(
+              children: [
+                pw.Text('Signed: _______________________'),
+                pw.SizedBox(width: 32),
+                pw.Text('Date: __________________'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+
+    final output = await getApplicationDocumentsDirectory();
+    final fileName =
+        'consent_refusal_${assessment.patientId}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+    final file = File('${output.path}/$fileName');
+    await file.writeAsBytes(await pdf.save());
+    return file.path;
   }
 
   pw.Widget _buildLogoHeader(
