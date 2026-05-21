@@ -6,7 +6,12 @@ import '../../../models/patient_profile.dart';
 import '../pdf_theme.dart';
 
 class PdfHeaderSection {
-  static pw.Widget build(Assessment assessment, {PatientProfile? patient}) {
+  static pw.Widget build(
+    Assessment assessment, {
+    PatientProfile? patient,
+    DateTime? generatedAt,
+  }) {
+    final generated = generatedAt ?? DateTime.now();
     return pw.Container(
       width: double.infinity,
       padding: const pw.EdgeInsets.all(14),
@@ -31,7 +36,7 @@ class PdfHeaderSection {
             style: pw.TextStyle(color: PdfTheme.sectionBg, fontSize: 10),
           ),
           pw.Text(
-            'Generated: ${DateFormat('dd MMM yyyy HH:mm').format(DateTime.now())} | Confidential',
+            'Generated: ${DateFormat('dd MMM yyyy HH:mm').format(generated)} | Confidential',
             style: pw.TextStyle(color: PdfTheme.sectionBg, fontSize: 9),
           ),
         ],

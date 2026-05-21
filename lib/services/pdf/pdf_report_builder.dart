@@ -24,6 +24,7 @@ class PdfReportBuilder {
     PatientProfile? patient,
     Assessment? priorAssessment,
     String? clinicalNote,
+    DateTime? generatedAt,
   }) async {
     final doc = pw.Document();
     doc.addPage(
@@ -33,7 +34,11 @@ class PdfReportBuilder {
         footer: (context) =>
             pdfPageFooter(context, label: 'ID: ${assessment.patientId}'),
         build: (context) => [
-          PdfHeaderSection.build(assessment, patient: patient),
+          PdfHeaderSection.build(
+            assessment,
+            patient: patient,
+            generatedAt: generatedAt,
+          ),
           pw.SizedBox(height: PdfTheme.sectionGap),
           PdfConsentSection.build(assessment),
           PdfRiskSection.build(
