@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'consent_basis.dart';
 import 'risk_level.dart';
 
 class Assessment {
@@ -23,6 +24,13 @@ class Assessment {
   final String? assessorUserId; // UUID of the doctor who created the assessment
   final bool isSynced; // Local sync status
   final RiskLevel riskLevel;
+  final ConsentBasis? consentBasis;
+  final String? consentNotes;
+  final DateTime? consentRecordedAt;
+  final String? consentRecordedBy;
+  final String assessmentStatus; // 'active', 'refused', 'completed'
+
+  bool get isRefused => assessmentStatus == 'refused';
 
   /// Generate anonymised ID for privacy-compliant reporting
   String get anonymisedId {
@@ -57,7 +65,14 @@ class Assessment {
     this.assessorUserId,
     this.isSynced = false,
     this.riskLevel = RiskLevel.low,
-  });
+    this.consentBasis,
+    this.consentNotes,
+    this.consentRecordedAt,
+    this.consentRecordedBy,
+    String? assessmentStatus,
+  }) : assessmentStatus =
+           assessmentStatus ??
+           (status == 'completed' || status == 'refused' ? status! : 'active');
 
   Map<String, dynamic> toMap() {
     return {
@@ -81,6 +96,11 @@ class Assessment {
       'assessor_user_id': assessorUserId,
       'is_synced': isSynced ? 1 : 0,
       'risk_level': riskLevel.name,
+      'consent_basis': consentBasis?.name,
+      'consent_notes': consentNotes,
+      'consent_recorded_at': consentRecordedAt?.toIso8601String(),
+      'consent_recorded_by': consentRecordedBy,
+      'assessment_status': assessmentStatus,
     };
   }
 
@@ -108,6 +128,15 @@ class Assessment {
       assessorUserId: map['assessor_user_id'] as String?,
       isSynced: map['is_synced'] == 1,
       riskLevel: riskLevelFromString(map['risk_level'] as String?),
+      consentBasis: consentBasisFromString(map['consent_basis'] as String?),
+      consentNotes: map['consent_notes'] as String?,
+      consentRecordedAt: _parseDate(map['consent_recorded_at']),
+      consentRecordedBy: map['consent_recorded_by'] as String?,
+      assessmentStatus:
+          map['assessment_status']?.toString() ??
+          (map['status'] == 'completed' || map['status'] == 'refused'
+              ? map['status'].toString()
+              : 'active'),
     );
   }
 
@@ -132,6 +161,11 @@ class Assessment {
     String? assessorUserId,
     bool? isSynced,
     RiskLevel? riskLevel,
+    ConsentBasis? consentBasis,
+    String? consentNotes,
+    DateTime? consentRecordedAt,
+    String? consentRecordedBy,
+    String? assessmentStatus,
   }) {
     return Assessment(
       id: id ?? this.id,
@@ -154,6 +188,11 @@ class Assessment {
       assessorUserId: assessorUserId ?? this.assessorUserId,
       isSynced: isSynced ?? this.isSynced,
       riskLevel: riskLevel ?? this.riskLevel,
+      consentBasis: consentBasis ?? this.consentBasis,
+      consentNotes: consentNotes ?? this.consentNotes,
+      consentRecordedAt: consentRecordedAt ?? this.consentRecordedAt,
+      consentRecordedBy: consentRecordedBy ?? this.consentRecordedBy,
+      assessmentStatus: assessmentStatus ?? this.assessmentStatus,
     );
   }
 

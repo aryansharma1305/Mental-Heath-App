@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mental_capacity_assessment/models/assessment.dart';
 import 'package:mental_capacity_assessment/models/clinical_note.dart';
+import 'package:mental_capacity_assessment/models/consent_basis.dart';
+import 'package:mental_capacity_assessment/models/consent_record.dart';
 import 'package:mental_capacity_assessment/models/patient_profile.dart';
 import 'package:mental_capacity_assessment/models/risk_level.dart';
 import 'package:mental_capacity_assessment/services/assessment_questions.dart';
@@ -186,7 +188,6 @@ void main() {
           triggeredLevel2Domains: const [],
           capacityFound: true,
           mhcaCompleted: false,
-          isEmergencyBasis: false,
         ),
         RiskLevel.moderate,
       );
@@ -213,9 +214,72 @@ void main() {
           triggeredLevel2Domains: const [],
           capacityFound: true,
           mhcaCompleted: false,
-          isEmergencyBasis: true,
+          consentBasis: ConsentBasis.lacksCapacityEmergency,
         ),
         RiskLevel.critical,
+      );
+    });
+  });
+
+  group('Consent recording', () {
+    test('parses and stores consent basis on assessment records', () {
+      final now = DateTime.now();
+      final assessment =
+          _assessmentWith(
+            responses: const {},
+            decisionContext: 'DSM-5 Assessment',
+            overallCapacity: 'Minimal symptoms',
+          ).copyWith(
+            consentBasis: ConsentBasis.consentObtained,
+            consentNotes: 'Patient agreed to proceed.',
+            consentRecordedAt: now,
+            consentRecordedBy: 'Dr Consent',
+            assessmentStatus: 'completed',
+          );
+
+      final parsed = Assessment.fromMap(assessment.toMap());
+
+      expect(parsed.consentBasis, ConsentBasis.consentObtained);
+      expect(parsed.consentRecordedBy, 'Dr Consent');
+      expect(parsed.assessmentStatus, 'completed');
+    });
+
+    test('refusal consent record requires notes', () {
+      final record = ConsentRecord(
+        basis: ConsentBasis.refused,
+        recordedAt: DateTime.now(),
+        recordedBy: 'Dr Consent',
+      );
+
+      expect(record.validate, throwsArgumentError);
+    });
+
+    test('refused assessment is locked and moderate by default', () {
+      final now = DateTime.now();
+      final assessment = Assessment(
+        patientId: 'P001',
+        patientName: 'Anonymised',
+        assessmentDate: now,
+        assessorName: 'Dr Consent',
+        assessorRole: 'doctor',
+        decisionContext: 'DSM-5 Consent Refusal',
+        responses: const {},
+        overallCapacity: 'Consent refused',
+        recommendations: 'No clinical assessment data was collected.',
+        createdAt: now,
+        updatedAt: now,
+        status: 'refused',
+        assessmentStatus: 'refused',
+        consentBasis: ConsentBasis.refused,
+        consentNotes: 'Patient declined today.',
+        consentRecordedAt: now,
+        consentRecordedBy: 'Dr Consent',
+      );
+
+      expect(assessment.isRefused, isTrue);
+      expect(
+        RiskStratificationService.computeForAssessment(assessment),
+        RiskLevel.moderate,
       );
     });
   });

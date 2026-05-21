@@ -3,6 +3,8 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/assessment.dart';
 import '../models/clinical_note.dart';
+import '../models/consent_basis.dart';
+import '../models/consent_record.dart';
 import '../models/patient_profile.dart';
 import '../models/risk_level.dart';
 import '../models/user.dart';
@@ -12,7 +14,7 @@ import 'supabase_service.dart';
 class DatabaseService {
   static Database? _database;
   static const String _databaseName = 'mental_capacity_assessments.db';
-  static const int _databaseVersion = 5;
+  static const int _databaseVersion = 6;
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -66,6 +68,11 @@ class DatabaseService {
         template_id INTEGER,
         is_synced INTEGER DEFAULT 0,
         risk_level TEXT DEFAULT 'low',
+        consent_basis TEXT,
+        consent_notes TEXT,
+        consent_recorded_at TEXT,
+        consent_recorded_by TEXT,
+        assessment_status TEXT DEFAULT 'active',
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )
@@ -200,6 +207,10 @@ class DatabaseService {
       await _ensureRiskLevelColumn(db);
       await _backfillRiskLevels(db);
     }
+
+    if (oldVersion < 6) {
+      await _ensureConsentColumns(db);
+    }
   }
 
   Future<void> _ensureRiskLevelColumn(Database db) async {
@@ -209,6 +220,22 @@ class DatabaseService {
       );
     } catch (e) {
       // Column might already exist.
+    }
+  }
+
+  Future<void> _ensureConsentColumns(Database db) async {
+    for (final statement in [
+      'ALTER TABLE assessments ADD COLUMN consent_basis TEXT',
+      'ALTER TABLE assessments ADD COLUMN consent_notes TEXT',
+      'ALTER TABLE assessments ADD COLUMN consent_recorded_at TEXT',
+      'ALTER TABLE assessments ADD COLUMN consent_recorded_by TEXT',
+      'ALTER TABLE assessments ADD COLUMN assessment_status TEXT DEFAULT "active"',
+    ]) {
+      try {
+        await db.execute(statement);
+      } catch (e) {
+        // Column might already exist.
+      }
     }
   }
 
@@ -287,8 +314,11 @@ class DatabaseService {
   Future<int> insertAssessment(Assessment assessment) async {
     final db = await database;
     try {
+      _validateAssessmentForInsert(assessment);
       final assessmentWithRisk = assessment.copyWith(
-        riskLevel: RiskStratificationService.computeForAssessment(assessment),
+        riskLevel: assessment.isRefused
+            ? assessment.riskLevel
+            : RiskStratificationService.computeForAssessment(assessment),
       );
 
       await upsertPatientFromAssessment(assessmentWithRisk);
@@ -325,7 +355,65 @@ class DatabaseService {
       return id;
     } catch (e) {
       debugPrint('Insert failed: $e');
-      return -1;
+      rethrow;
+    }
+  }
+
+  Future<Assessment> saveRefusalRecord({
+    required String patientId,
+    required String patientName,
+    required String assessmentType,
+    required ConsentRecord consent,
+    required bool emergencyContext,
+  }) async {
+    consent.validate();
+    if (consent.basis != ConsentBasis.refused) {
+      throw ArgumentError('saveRefusalRecord requires ConsentBasis.refused.');
+    }
+
+    final now = DateTime.now();
+    final assessment = Assessment(
+      patientId: patientId,
+      patientName: patientName,
+      assessmentDate: now,
+      assessorName: consent.recordedBy,
+      assessorRole: 'Clinician',
+      decisionContext: '$assessmentType Consent Refusal',
+      responses: const {},
+      overallCapacity: 'Consent refused',
+      recommendations: 'No clinical assessment data was collected.',
+      createdAt: now,
+      updatedAt: now,
+      status: 'refused',
+      assessmentStatus: 'refused',
+      consentBasis: ConsentBasis.refused,
+      consentNotes: consent.notes,
+      consentRecordedAt: consent.recordedAt,
+      consentRecordedBy: consent.recordedBy,
+      riskLevel: emergencyContext ? RiskLevel.critical : RiskLevel.moderate,
+      isSynced: false,
+    );
+
+    final id = await insertAssessment(assessment);
+    return assessment.copyWith(id: id);
+  }
+
+  void _validateAssessmentForInsert(Assessment assessment) {
+    if (assessment.consentBasis == ConsentBasis.refused) {
+      if (assessment.assessmentStatus != 'refused') {
+        throw ArgumentError(
+          'Refused consent records must be saved as refused.',
+        );
+      }
+      if (assessment.consentNotes == null ||
+          assessment.consentNotes!.trim().isEmpty) {
+        throw ArgumentError('Refused consent records require notes.');
+      }
+      if (assessment.responses.isNotEmpty) {
+        throw ArgumentError(
+          'Refused consent records cannot contain assessment responses.',
+        );
+      }
     }
   }
 
@@ -542,6 +630,12 @@ class DatabaseService {
 
   Future<int> updateAssessment(Assessment assessment) async {
     final db = await database;
+    final existing = assessment.id == null
+        ? null
+        : await getAssessment(assessment.id!);
+    if (existing?.assessmentStatus == 'refused') {
+      throw StateError('Refused assessment records are locked.');
+    }
     return await db.update(
       'assessments',
       assessment.toMap(),

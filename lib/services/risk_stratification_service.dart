@@ -1,4 +1,5 @@
 import '../models/assessment.dart';
+import '../models/consent_basis.dart';
 import '../models/risk_level.dart';
 import 'assessment_questions.dart';
 
@@ -12,9 +13,10 @@ class RiskStratificationService {
     required List<String> triggeredLevel2Domains,
     required bool capacityFound,
     required bool mhcaCompleted,
-    required bool isEmergencyBasis,
+    ConsentBasis? consentBasis,
   }) {
-    if (isEmergencyBasis) return RiskLevel.critical;
+    if (consentBasis?.isEmergency == true) return RiskLevel.critical;
+    if (consentBasis == ConsentBasis.refused) return RiskLevel.moderate;
     if (!capacityFound && mhcaCompleted && triggeredLevel2Domains.length >= 2) {
       return RiskLevel.critical;
     }
@@ -29,10 +31,7 @@ class RiskStratificationService {
     return RiskLevel.low;
   }
 
-  static RiskLevel computeForAssessment(
-    Assessment assessment, {
-    bool isEmergencyBasis = false,
-  }) {
+  static RiskLevel computeForAssessment(Assessment assessment) {
     final context = assessment.decisionContext.toLowerCase();
     final outcome = assessment.overallCapacity.toLowerCase();
     final isDsm5 = context.contains('dsm-5') || context.contains('dsm5');
@@ -63,7 +62,7 @@ class RiskStratificationService {
       triggeredLevel2Domains: triggeredLevel2Domains,
       capacityFound: capacityFound,
       mhcaCompleted: mhcaCompleted,
-      isEmergencyBasis: isEmergencyBasis,
+      consentBasis: assessment.consentBasis,
     );
   }
 

@@ -202,7 +202,13 @@ class SupabaseService {
             'overall_capacity': assessment.overallCapacity,
             'recommendations': assessment.recommendations,
             'risk_level': assessment.riskLevel.name,
-            'status': 'pending',
+            'consent_basis': assessment.consentBasis?.name,
+            'consent_notes': assessment.consentNotes,
+            'consent_recorded_at': assessment.consentRecordedAt
+                ?.toIso8601String(),
+            'consent_recorded_by': assessment.consentRecordedBy,
+            'assessment_status': assessment.assessmentStatus,
+            'status': assessment.status ?? 'pending',
           })
           .select()
           .single();
@@ -259,6 +265,12 @@ class SupabaseService {
           'overall_capacity': assessment.overallCapacity,
           'recommendations': assessment.recommendations,
           'risk_level': assessment.riskLevel.name,
+          'consent_basis': assessment.consentBasis?.name,
+          'consent_notes': assessment.consentNotes,
+          'consent_recorded_at': assessment.consentRecordedAt
+              ?.toIso8601String(),
+          'consent_recorded_by': assessment.consentRecordedBy,
+          'assessment_status': assessment.assessmentStatus,
           'status': assessment.status ?? 'pending',
           'reviewed_by': assessment.reviewedBy,
           'reviewed_at': assessment.reviewedAt?.toIso8601String(),
