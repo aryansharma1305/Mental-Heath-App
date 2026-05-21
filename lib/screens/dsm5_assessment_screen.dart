@@ -3,12 +3,15 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import '../models/consent_basis.dart';
+import '../models/consent_record.dart';
 import '../models/question.dart';
 import '../models/assessment.dart';
 import '../services/assessment_questions.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
 import '../theme/app_theme.dart';
+import 'consent_gate_screen.dart';
 import 'dsm5_level2_assessment_screen.dart';
 
 class DSM5AssessmentScreen extends StatefulWidget {
@@ -32,6 +35,7 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
   int _currentPage = 0;
   bool _isSubmitting = false;
   bool _showPatientInfo = true;
+  ConsentRecord? _consentRecord;
 
   late AnimationController _animationController;
 
@@ -52,7 +56,7 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
     });
   }
 
-  void _startAssessment() {
+  Future<void> _startAssessment() async {
     if (_patientIdController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -63,7 +67,41 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
       return;
     }
 
+    final currentUser = await _authService.getCurrentUserModel();
+    if (!mounted) return;
+    final consent = await Navigator.push<ConsentRecord>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ConsentGateScreen(
+          patientLabel: _patientIdController.text.trim(),
+          assessmentType: 'DSM-5 Assessment',
+          recordedBy: currentUser?.fullName ?? 'Unknown clinician',
+        ),
+      ),
+    );
+    if (consent == null) return;
+
+    if (consent.basis == ConsentBasis.refused) {
+      await DatabaseService().saveRefusalRecord(
+        patientId: _patientIdController.text.trim(),
+        patientName: 'Anonymised',
+        assessmentType: 'DSM-5',
+        consent: consent,
+        emergencyContext: false,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Consent refusal saved. Assessment stopped.'),
+          backgroundColor: AppTheme.warningOrange,
+        ),
+      );
+      Navigator.pop(context, true);
+      return;
+    }
+
     setState(() {
+      _consentRecord = consent;
       _showPatientInfo = false;
     });
   }
@@ -208,6 +246,11 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
         createdAt: DateTime.parse(data['created_at']),
         updatedAt: DateTime.now(),
         status: 'completed',
+        assessmentStatus: 'completed',
+        consentBasis: _consentRecord?.basis,
+        consentNotes: _consentRecord?.notes,
+        consentRecordedAt: _consentRecord?.recordedAt,
+        consentRecordedBy: _consentRecord?.recordedBy,
         isSynced: false,
       );
 
