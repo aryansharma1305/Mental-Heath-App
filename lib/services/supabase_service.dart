@@ -201,6 +201,8 @@ class SupabaseService {
             'responses': assessment.responses,
             'overall_capacity': assessment.overallCapacity,
             'recommendations': assessment.recommendations,
+            'recommendations_json': assessment.structuredRecommendations
+                .toJson(),
             'risk_level': assessment.riskLevel.name,
             'consent_basis': assessment.consentBasis?.name,
             'consent_notes': assessment.consentNotes,
@@ -264,6 +266,7 @@ class SupabaseService {
           'responses': assessment.responses,
           'overall_capacity': assessment.overallCapacity,
           'recommendations': assessment.recommendations,
+          'recommendations_json': assessment.structuredRecommendations.toJson(),
           'risk_level': assessment.riskLevel.name,
           'consent_basis': assessment.consentBasis?.name,
           'consent_notes': assessment.consentNotes,

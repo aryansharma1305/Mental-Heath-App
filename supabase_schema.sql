@@ -64,6 +64,7 @@ CREATE TABLE assessments (
     responses JSONB NOT NULL DEFAULT '{}',
     overall_capacity TEXT NOT NULL,
     recommendations TEXT,
+    recommendations_json JSONB DEFAULT '{}',
     risk_level TEXT DEFAULT 'low',
     consent_basis TEXT,
     consent_notes TEXT,

@@ -16,7 +16,7 @@ import 'supabase_service.dart';
 class DatabaseService {
   static Database? _database;
   static const String _databaseName = 'mental_capacity_assessments.db';
-  static const int _databaseVersion = 6;
+  static const int _databaseVersion = 7;
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -66,6 +66,7 @@ class DatabaseService {
         responses TEXT NOT NULL,
         overall_capacity TEXT NOT NULL,
         recommendations TEXT,
+        recommendations_json TEXT,
         status TEXT DEFAULT 'pending',
         reviewed_by TEXT,
         reviewed_at TEXT,
@@ -216,6 +217,10 @@ class DatabaseService {
     if (oldVersion < 6) {
       await _ensureConsentColumns(db);
     }
+
+    if (oldVersion < 7) {
+      await _ensureRecommendationsJsonColumn(db);
+    }
   }
 
   Future<void> _ensureRiskLevelColumn(Database db) async {
@@ -241,6 +246,16 @@ class DatabaseService {
       } catch (e) {
         // Column might already exist.
       }
+    }
+  }
+
+  Future<void> _ensureRecommendationsJsonColumn(Database db) async {
+    try {
+      await db.execute(
+        'ALTER TABLE assessments ADD COLUMN recommendations_json TEXT',
+      );
+    } catch (e) {
+      // Column might already exist.
     }
   }
 

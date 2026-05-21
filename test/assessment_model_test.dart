@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mental_capacity_assessment/models/assessment.dart';
+import 'package:mental_capacity_assessment/models/assessment_recommendations.dart';
 import 'package:mental_capacity_assessment/models/clinical_note.dart';
 import 'package:mental_capacity_assessment/models/consent_basis.dart';
 import 'package:mental_capacity_assessment/models/consent_record.dart';
@@ -285,6 +286,48 @@ void main() {
     });
   });
 
+  group('Assessment recommendations', () {
+    test(
+      'stores structured recommendations as JSON while keeping text summary',
+      () {
+        const recommendations = AssessmentRecommendations(
+          followUpRecommended: true,
+          referToSpecialist: true,
+          freeText: 'Repeat assessment after medication review.',
+        );
+        final assessment = _assessmentWith(
+          responses: const {},
+          decisionContext: 'DSM-5 Assessment',
+          overallCapacity: 'Moderate symptoms',
+          recommendations: recommendations.toLegacySummary(),
+          structuredRecommendations: recommendations,
+        );
+
+        final mapped = assessment.toMap();
+        final parsed = Assessment.fromMap(mapped);
+
+        expect(mapped['recommendations'], contains('Follow-up'));
+        expect(mapped['recommendations_json'], isA<String>());
+        expect(parsed.structuredRecommendations.followUpRecommended, isTrue);
+        expect(parsed.structuredRecommendations.referToSpecialist, isTrue);
+        expect(parsed.structuredRecommendations.noFurtherAction, isFalse);
+        expect(
+          parsed.structuredRecommendations.freeText,
+          contains('medication'),
+        );
+      },
+    );
+
+    test('parses legacy recommendation text as free text fallback', () {
+      final recommendations = AssessmentRecommendations.fromStorage(
+        'Continue routine monitoring',
+      );
+
+      expect(recommendations.freeText, 'Continue routine monitoring');
+      expect(recommendations.toLegacySummary(), 'Continue routine monitoring');
+    });
+  });
+
   group('Encryption key generation', () {
     test('generates a 32-byte url-safe database key', () {
       final key = EncryptionService.generateKey();
@@ -301,6 +344,8 @@ Assessment _assessmentWith({
   required Map<String, dynamic> responses,
   required String decisionContext,
   required String overallCapacity,
+  String recommendations = '',
+  AssessmentRecommendations? structuredRecommendations,
 }) {
   final now = DateTime.now();
   return Assessment(
@@ -312,7 +357,8 @@ Assessment _assessmentWith({
     decisionContext: decisionContext,
     responses: responses,
     overallCapacity: overallCapacity,
-    recommendations: '',
+    recommendations: recommendations,
+    structuredRecommendations: structuredRecommendations,
     createdAt: now,
     updatedAt: now,
   );

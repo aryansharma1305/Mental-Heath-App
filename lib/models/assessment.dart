@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'assessment_recommendations.dart';
 import 'consent_basis.dart';
 import 'risk_level.dart';
 
@@ -14,6 +15,7 @@ class Assessment {
   final Map<String, dynamic> responses;
   final String overallCapacity;
   final String recommendations;
+  final AssessmentRecommendations structuredRecommendations;
   final DateTime createdAt;
   final DateTime updatedAt;
   final String? status; // 'pending', 'reviewed', 'completed'
@@ -55,6 +57,7 @@ class Assessment {
     required this.responses,
     required this.overallCapacity,
     required this.recommendations,
+    AssessmentRecommendations? structuredRecommendations,
     required this.createdAt,
     required this.updatedAt,
     this.status,
@@ -70,7 +73,10 @@ class Assessment {
     this.consentRecordedAt,
     this.consentRecordedBy,
     String? assessmentStatus,
-  }) : assessmentStatus =
+  }) : structuredRecommendations =
+           structuredRecommendations ??
+           AssessmentRecommendations.fromStorage(null),
+       assessmentStatus =
            assessmentStatus ??
            (status == 'completed' || status == 'refused' ? status! : 'active');
 
@@ -86,6 +92,7 @@ class Assessment {
       'responses': jsonEncode(responses),
       'overall_capacity': overallCapacity,
       'recommendations': recommendations,
+      'recommendations_json': structuredRecommendations.toStorageJson(),
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
       'status': status ?? 'pending',
@@ -118,6 +125,9 @@ class Assessment {
       responses: _parseResponses(map['responses']),
       overallCapacity: map['overall_capacity'] ?? '',
       recommendations: map['recommendations'] ?? '',
+      structuredRecommendations: AssessmentRecommendations.fromStorage(
+        map['recommendations_json'],
+      ),
       createdAt: _parseDate(map['created_at']) ?? now,
       updatedAt: _parseDate(map['updated_at']) ?? now,
       status: map['status'] as String?,
@@ -151,6 +161,7 @@ class Assessment {
     Map<String, dynamic>? responses,
     String? overallCapacity,
     String? recommendations,
+    AssessmentRecommendations? structuredRecommendations,
     DateTime? createdAt,
     DateTime? updatedAt,
     String? status,
@@ -178,6 +189,8 @@ class Assessment {
       responses: responses ?? this.responses,
       overallCapacity: overallCapacity ?? this.overallCapacity,
       recommendations: recommendations ?? this.recommendations,
+      structuredRecommendations:
+          structuredRecommendations ?? this.structuredRecommendations,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       status: status ?? this.status,
