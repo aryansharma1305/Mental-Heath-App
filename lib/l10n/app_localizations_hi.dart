@@ -168,4 +168,28 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get capacityFluctuating =>
       'उतार-चढ़ाव वाली क्षमता - पुनर्मूल्यांकन की आवश्यकता है';
+
+  @override
+  String get patientProfiles => 'रोगी प्रोफाइल';
+
+  @override
+  String get patientProfilesDesc => 'केस इतिहास';
+
+  @override
+  String get analytics => 'एनालिटिक्स';
+
+  @override
+  String get analyticsDesc => 'आंकड़े देखें';
+
+  @override
+  String get activity => 'गतिविधि';
+
+  @override
+  String get logout => 'लॉग आउट';
+
+  @override
+  String get analyticsDashboard => 'एनालिटिक्स डैशबोर्ड';
+
+  @override
+  String get noDataAvailable => 'कोई डेटा उपलब्ध नहीं है';
 }

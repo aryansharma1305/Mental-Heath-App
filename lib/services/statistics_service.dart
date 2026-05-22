@@ -2,11 +2,11 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/assessment.dart';
 import 'database_service.dart';
-import 'supabase_service.dart';
+import 'api_service.dart';
 
 class StatisticsService {
   final DatabaseService _databaseService = DatabaseService();
-  final SupabaseService _supabaseService = SupabaseService();
+  final ApiService _apiService = ApiService();
 
   /// Get DSM-5 assessments from SharedPreferences (local storage)
   Future<List<Map<String, dynamic>>> _getDsm5Assessments() async {
@@ -50,14 +50,12 @@ class StatisticsService {
     // 3. Get MHCA assessments from SharedPreferences
     final mhcaAssessments = await _getMhcaAssessments();
 
-    // 4. Get Supabase assessments if available
-    List<Assessment> supabaseAssessments = [];
-    if (SupabaseService.isAvailable) {
-      try {
-        supabaseAssessments = await _supabaseService.getAllAssessments();
-      } catch (e) {
-        // Ignore Supabase errors
-      }
+    // 4. Get API assessments if available
+    List<Assessment> apiAssessments = [];
+    try {
+      apiAssessments = await _apiService.getAllAssessments();
+    } catch (e) {
+      // Ignore API errors
     }
 
     final now = DateTime.now();
@@ -163,14 +161,14 @@ class StatisticsService {
       }
     }
 
-    // ---- Count Supabase assessments (avoid double-counting) ----
-    // We only add Supabase assessments that are NOT already in localAssessments
+    // ---- Count API assessments (avoid double-counting) ----
+    // We only add API assessments that are NOT already in localAssessments
     int todaySupabase = 0;
     int weekSupabase = 0;
     int monthSupabase = 0;
     final localIds = localAssessments.map((a) => a.patientId).toSet();
 
-    for (final a in supabaseAssessments) {
+    for (final a in apiAssessments) {
       // Skip if already counted in local
       if (localIds.contains(a.patientId)) continue;
 
@@ -198,7 +196,7 @@ class StatisticsService {
         localAssessments.length +
         dsm5Assessments.length +
         mhcaAssessments.length +
-        supabaseAssessments
+        apiAssessments
             .where((a) => !localIds.contains(a.patientId))
             .length;
     final todayAssessments = todayLocal + todayDsm5 + todayMhca + todaySupabase;
@@ -220,7 +218,7 @@ class StatisticsService {
             (assessorStats[a.assessorName] ?? 0) + 1;
       }
     }
-    for (final a in supabaseAssessments) {
+    for (final a in apiAssessments) {
       if (!localIds.contains(a.patientId)) {
         assessorStats[a.assessorName] =
             (assessorStats[a.assessorName] ?? 0) + 1;
@@ -260,17 +258,15 @@ class StatisticsService {
       // Ignore
     }
 
-    // Also add Supabase if available
-    if (SupabaseService.isAvailable) {
-      try {
-        final supabaseAssessments = await _supabaseService.getAllAssessments();
-        final localIds = allAssessments.map((a) => a.patientId).toSet();
-        allAssessments.addAll(
-          supabaseAssessments.where((a) => !localIds.contains(a.patientId)),
-        );
-      } catch (e) {
-        // Ignore
-      }
+    // Also add API if available
+    try {
+      final apiAssessments = await _apiService.getAllAssessments();
+      final localIds = allAssessments.map((a) => a.patientId).toSet();
+      allAssessments.addAll(
+        apiAssessments.where((a) => !localIds.contains(a.patientId)),
+      );
+    } catch (e) {
+      // Ignore
     }
 
     // Also include MHCA assessments from SharedPreferences
@@ -362,16 +358,14 @@ class StatisticsService {
       // Ignore
     }
 
-    if (SupabaseService.isAvailable) {
-      try {
-        final supabaseAssessments = await _supabaseService.getAllAssessments();
-        final localIds = allAssessments.map((a) => a.patientId).toSet();
-        allAssessments.addAll(
-          supabaseAssessments.where((a) => !localIds.contains(a.patientId)),
-        );
-      } catch (e) {
-        // Ignore
-      }
+    try {
+      final apiAssessments = await _apiService.getAllAssessments();
+      final localIds = allAssessments.map((a) => a.patientId).toSet();
+      allAssessments.addAll(
+        apiAssessments.where((a) => !localIds.contains(a.patientId)),
+      );
+    } catch (e) {
+      // Ignore
     }
 
     final userAssessments = allAssessments

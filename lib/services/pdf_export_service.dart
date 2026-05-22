@@ -6,6 +6,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../models/assessment.dart';
+import '../models/countersignature.dart';
+import 'countersignature_service.dart';
 import 'database_service.dart';
 import 'pdf/pdf_refusal_builder.dart';
 import 'pdf/pdf_report_builder.dart';
@@ -26,6 +28,12 @@ class PdfExportService {
           : await db.getClinicalNotesForAssessment(assessment.id!);
       final clinicalNote = notes.isEmpty ? null : notes.first.note;
 
+      Countersignature? cs;
+      if (assessment.id != null) {
+        cs = await CountersignatureService.instance
+            .getCountersignature(assessment.id!);
+      }
+
       final bytes = assessment.isRefused
           ? await PdfRefusalBuilder().buildRefusalRecord(assessment)
           : await PdfReportBuilder().buildFullReport(
@@ -33,6 +41,7 @@ class PdfExportService {
               patient: patient,
               priorAssessment: priorAssessment,
               clinicalNote: clinicalNote,
+              countersignature: cs,
             );
 
       final directory = await getApplicationDocumentsDirectory();

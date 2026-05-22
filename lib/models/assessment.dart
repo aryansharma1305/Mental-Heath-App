@@ -33,7 +33,17 @@ class Assessment {
   final String assessmentStatus; // 'active', 'refused', 'completed'
   final int? priorAssessmentId;
 
+  // Countersignature fields (Phase 4c)
+  // Values: null (not required), 'pending', 'countersigned', 'amendment_requested'
+  final String? countersignatureStatus;
+  final String? amendmentNote; // note attached when amendment is requested
+
   bool get isRefused => assessmentStatus == 'refused';
+
+  /// True when a countersignature has been requested but not yet completed.
+  bool get pendingCountersignature =>
+      countersignatureStatus == 'pending' ||
+      countersignatureStatus == 'amendment_requested';
 
   /// Generate anonymised ID for privacy-compliant reporting
   String get anonymisedId {
@@ -75,6 +85,8 @@ class Assessment {
     this.consentRecordedBy,
     String? assessmentStatus,
     this.priorAssessmentId,
+    this.countersignatureStatus,
+    this.amendmentNote,
   }) : structuredRecommendations =
            structuredRecommendations ??
            AssessmentRecommendations.fromStorage(null),
@@ -111,6 +123,8 @@ class Assessment {
       'consent_recorded_by': consentRecordedBy,
       'assessment_status': assessmentStatus,
       'prior_assessment_id': priorAssessmentId,
+      'countersignature_status': countersignatureStatus,
+      'amendment_note': amendmentNote,
     };
   }
 
@@ -151,6 +165,8 @@ class Assessment {
           (map['status'] == 'completed' || map['status'] == 'refused'
               ? map['status'].toString()
               : 'active'),
+      countersignatureStatus: map['countersignature_status'] as String?,
+      amendmentNote: map['amendment_note'] as String?,
     );
   }
 
@@ -182,6 +198,8 @@ class Assessment {
     String? consentRecordedBy,
     String? assessmentStatus,
     int? priorAssessmentId,
+    String? countersignatureStatus,
+    String? amendmentNote,
   }) {
     return Assessment(
       id: id ?? this.id,
@@ -212,6 +230,9 @@ class Assessment {
       consentRecordedBy: consentRecordedBy ?? this.consentRecordedBy,
       assessmentStatus: assessmentStatus ?? this.assessmentStatus,
       priorAssessmentId: priorAssessmentId ?? this.priorAssessmentId,
+      countersignatureStatus:
+          countersignatureStatus ?? this.countersignatureStatus,
+      amendmentNote: amendmentNote ?? this.amendmentNote,
     );
   }
 

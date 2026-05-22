@@ -2,11 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/assessment.dart';
-import '../services/supabase_service.dart';
+import '../models/countersignature.dart';
+import '../services/countersignature_service.dart';
+import '../services/database_service.dart';
+import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/pdf_export_service.dart';
+import '../services/reminder_service.dart';
 import '../models/user_role.dart';
 import '../theme/app_theme.dart';
+import '../widgets/overdue_banner.dart';
+import 'countersignature_screen.dart';
 
 class AssessmentDetailScreen extends StatefulWidget {
   final int assessmentId;
@@ -23,12 +29,13 @@ class AssessmentDetailScreen extends StatefulWidget {
 }
 
 class _AssessmentDetailScreenState extends State<AssessmentDetailScreen> {
-  final SupabaseService _supabaseService = SupabaseService();
+  final ApiService _apiService = ApiService();
   final AuthService _authService = AuthService();
   final PdfExportService _pdfExportService = PdfExportService();
   final TextEditingController _notesController = TextEditingController();
 
   Assessment? _assessment;
+  Countersignature? _countersignature;
   bool _isLoading = true;
   bool _isReviewing = false;
   UserRole? _currentUserRole;
@@ -50,20 +57,30 @@ class _AssessmentDetailScreenState extends State<AssessmentDetailScreen> {
   Future<void> _loadAssessment() async {
     setState(() => _isLoading = true);
     try {
-      if (SupabaseService.isAvailable) {
-        final assessment = await _supabaseService.getAssessment(
-          widget.assessmentId,
-        );
-        setState(() {
-          _assessment = assessment;
-          if (assessment?.doctorNotes != null) {
-            _notesController.text = assessment!.doctorNotes!;
-          }
-          _isLoading = false;
-        });
-      } else {
-        setState(() => _isLoading = false);
+      Assessment? assessment;
+      try {
+        final assessments = await _apiService.getAllAssessments();
+        assessment = assessments.firstWhere((a) => a.id == widget.assessmentId);
+      } catch (e) {
+        // Fallback to local DB below
       }
+      // Fallback: load from local DB (offline-first)
+      assessment ??=
+          await DatabaseService().getAssessment(widget.assessmentId);
+
+      Countersignature? cs;
+      if (assessment?.id != null) {
+        cs = await CountersignatureService.instance
+            .getCountersignature(assessment!.id!);
+      }
+      setState(() {
+        _assessment = assessment;
+        _countersignature = cs;
+        if (assessment?.doctorNotes != null) {
+          _notesController.text = assessment!.doctorNotes!;
+        }
+        _isLoading = false;
+      });
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
@@ -85,7 +102,7 @@ class _AssessmentDetailScreenState extends State<AssessmentDetailScreen> {
         throw Exception('User not found');
       }
 
-      await _supabaseService.reviewAssessment(
+      await _apiService.reviewAssessment(
         assessmentId: widget.assessmentId,
         reviewerId: currentUser.id,
         status: status,
@@ -224,6 +241,128 @@ class _AssessmentDetailScreenState extends State<AssessmentDetailScreen> {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Countersignature helpers
+  // ---------------------------------------------------------------------------
+
+  Color _csStatusColor(String? status) => switch (status) {
+        'pending' => Colors.orange.shade600,
+        'countersigned' => Colors.green.shade600,
+        'amendment_requested' => Colors.red.shade600,
+        _ => Colors.grey,
+      };
+
+  String _csStatusLabel(String? status) => switch (status) {
+        'pending' => 'Awaiting Sign-off',
+        'countersigned' => 'Countersigned',
+        'amendment_requested' => 'Amendment Needed',
+        _ => '',
+      };
+
+  /// Amendment editing: only doctorNotes and recommendations may be changed.
+  Future<void> _showAmendmentEditDialog() async {
+    if (_assessment == null) return;
+    final notesCtrl =
+        TextEditingController(text: _assessment!.doctorNotes ?? '');
+    final recsCtrl =
+        TextEditingController(text: _assessment!.recommendations);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Apply amendment',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'You may only edit clinical notes and recommendations.\n'
+                'Clinical scores and responses are immutable.',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: notesCtrl,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Doctor notes',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: recsCtrl,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Recommendations',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Save & resubmit'),
+          ),
+        ],
+      ),
+    );
+
+    notesCtrl.dispose();
+    recsCtrl.dispose();
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final updated = CountersignatureService.instance.applyAmendmentEdits(
+        _assessment!,
+        doctorNotes: notesCtrl.text.trim(),
+        recommendations: recsCtrl.text.trim(),
+      );
+      await DatabaseService().updateAssessment(updated);
+      if (_assessment!.id != null) {
+        await CountersignatureService.instance
+            .requestCountersignature(_assessment!.id!);
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Amendment saved. Countersignature re-requested.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _loadAssessment();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error applying amendment: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Color _getCapacityColor(String capacity) {
     switch (capacity.toLowerCase()) {
       case 'has capacity for this decision':
@@ -267,11 +406,39 @@ class _AssessmentDetailScreenState extends State<AssessmentDetailScreen> {
   Widget build(BuildContext context) {
     final canReview =
         widget.allowReview && (_currentUserRole?.canReviewAssessments ?? false);
+    final a = _assessment;
+    final isPending = a?.countersignatureStatus == 'pending';
+    final isAmendmentRequested =
+        a?.countersignatureStatus == 'amendment_requested';
+    final isCountersigned = a?.countersignatureStatus == 'countersigned';
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Assessment Details'),
         actions: [
+          // Countersignature status badge
+          if (a != null && a.countersignatureStatus != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Center(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _csStatusColor(a.countersignatureStatus),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    _csStatusLabel(a.countersignatureStatus),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           if (_assessment != null)
             IconButton(
               icon: const Icon(Icons.download),
@@ -310,6 +477,42 @@ class _AssessmentDetailScreenState extends State<AssessmentDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Overdue follow-up banner — shown before anything else.
+                  if (ReminderService.instance.overdueFor(_assessment!))
+                    OverdueBanner(
+                      assessment: _assessment!,
+                      onStartFollowUp: () {
+                        Navigator.pop(context, 'start_follow_up');
+                      },
+                    ),
+
+                  // Pending countersignature banner
+                  if (isPending)
+                    _CountersignaturePendingBanner(
+                      onCountersignNow: () async {
+                        final done = await Navigator.push<bool>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => CountersignatureScreen(
+                              assessment: _assessment!,
+                            ),
+                          ),
+                        );
+                        if (done == true) _loadAssessment();
+                      },
+                    ),
+
+                  // Amendment requested banner
+                  if (isAmendmentRequested)
+                    _AmendmentRequestedBanner(
+                      note: _assessment!.amendmentNote,
+                      onEditNow: () => _showAmendmentEditDialog(),
+                    ),
+
+                  // Countersigned confirmation banner
+                  if (isCountersigned && _countersignature != null)
+                    _CountersignedBanner(cs: _countersignature!),
+
                   // Status Badge
                   if (_assessment!.status != null)
                     Container(
@@ -708,5 +911,167 @@ class _AssessmentDetailScreenState extends State<AssessmentDetailScreen> {
   void dispose() {
     _notesController.dispose();
     super.dispose();
+  }
+}
+
+// =============================================================================
+// Banner widgets for countersignature states
+// =============================================================================
+class _CountersignaturePendingBanner extends StatelessWidget {
+  final VoidCallback onCountersignNow;
+  const _CountersignaturePendingBanner({required this.onCountersignNow});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.orange.shade300),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.pending_actions_rounded,
+              color: Colors.orange.shade700, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Awaiting countersignature',
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.w600,
+                color: Colors.orange.shade800,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: onCountersignNow,
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.orange.shade800,
+            ),
+            child: const Text('Sign now'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AmendmentRequestedBanner extends StatelessWidget {
+  final String? note;
+  final VoidCallback onEditNow;
+  const _AmendmentRequestedBanner(
+      {required this.note, required this.onEditNow});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.red.shade300),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.edit_note_rounded,
+                  color: Colors.red.shade700, size: 22),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Amendment requested',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.red.shade800,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: onEditNow,
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.red.shade800,
+                ),
+                child: const Text('Edit'),
+              ),
+            ],
+          ),
+          if (note != null && note!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.only(left: 32),
+              child: Text(
+                note!,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: Colors.red.shade700,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CountersignedBanner extends StatelessWidget {
+  final Countersignature cs;
+  const _CountersignedBanner({required this.cs});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.green.shade300),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.verified_user_rounded,
+              color: Colors.green.shade700, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Countersigned by ${cs.signatoryName}',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.green.shade800,
+                  ),
+                ),
+                Text(
+                  '${cs.signatoryRole} • ${DateFormat('d MMM yyyy HH:mm').format(cs.signedAt)}',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Colors.green.shade700,
+                  ),
+                ),
+                if (cs.outcome == CountersignatureOutcome.approvedWithComments &&
+                    cs.notes != null)
+                  Text(
+                    'Note: ${cs.notes}',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Colors.green.shade700,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

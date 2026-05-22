@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:ui';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
 import 'home_screen.dart';
+import 'onboarding_screen.dart';
 
 class SimpleSplashScreen extends StatefulWidget {
   const SimpleSplashScreen({super.key});
@@ -43,7 +45,24 @@ class _SimpleSplashScreenState extends State<SimpleSplashScreen>
     await Future.delayed(const Duration(milliseconds: 2500));
     if (!mounted) return;
 
-    // Check if user is already authenticated
+    // First-launch check — show onboarding if the clinician hasn't been
+    // through the setup flow yet.
+    final prefs = await SharedPreferences.getInstance();
+    final onboardingDone = prefs.getBool('onboarding_complete') ?? false;
+    if (!onboardingDone) {
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (context, anim1, anim2) => const OnboardingScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+              FadeTransition(opacity: animation, child: child),
+          transitionDuration: const Duration(milliseconds: 800),
+        ),
+      );
+      return;
+    }
+
+    // Returning user — check authentication.
     final authService = AuthService();
     final isAuthenticated = await authService.isAuthenticated();
 

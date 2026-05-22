@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../services/supabase_service.dart';
+import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/statistics_service.dart';
 import '../models/assessment.dart';
@@ -20,7 +20,7 @@ class DoctorDashboardScreen extends StatefulWidget {
 }
 
 class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
-  final SupabaseService _supabaseService = SupabaseService();
+  final ApiService _apiService = ApiService();
   final AuthService _authService = AuthService();
   final StatisticsService _statisticsService = StatisticsService();
 
@@ -42,9 +42,9 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
       final user = await _authService.getCurrentUserModel();
       final userId = await _authService.getCurrentUserId();
 
-      if (SupabaseService.isAvailable && user != null && userId != null) {
+      if (user != null && userId != null) {
         // Load assessments created by this doctor only
-        final doctorAssessments = await _supabaseService
+        final doctorAssessments = await _apiService
             .getAssessmentsByAssessorId(userId);
 
         _pendingAssessments = doctorAssessments

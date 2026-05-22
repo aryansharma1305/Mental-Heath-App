@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/assessment.dart';
-import '../services/supabase_service.dart';
+import '../services/database_service.dart';
+import '../widgets/empty_state_widget.dart';
 import 'package:mental_capacity_assessment/l10n/app_localizations.dart';
 import 'assessment_detail_screen.dart';
+import '../widgets/overdue_banner.dart';
+import 'dsm5_assessment_screen.dart';
 
 class AssessmentListScreen extends StatefulWidget {
   const AssessmentListScreen({super.key});
@@ -14,7 +17,7 @@ class AssessmentListScreen extends StatefulWidget {
 }
 
 class _AssessmentListScreenState extends State<AssessmentListScreen> {
-  final SupabaseService _supabaseService = SupabaseService();
+  final DatabaseService _databaseService = DatabaseService();
   final TextEditingController _searchController = TextEditingController();
 
   List<Assessment> _assessments = [];
@@ -30,20 +33,25 @@ class _AssessmentListScreenState extends State<AssessmentListScreen> {
   Future<void> _loadAssessments() async {
     setState(() => _isLoading = true);
     try {
-      if (SupabaseService.isAvailable) {
-        final assessments = await _supabaseService.getAllAssessments();
+      // Load from local SQLite first — works offline on every install.
+      final assessments = await _databaseService.getAllAssessments();
+      if (mounted) {
         setState(() {
           _assessments = assessments;
           _filteredAssessments = assessments;
           _isLoading = false;
         });
         _sortAssessments();
-      } else {
-        setState(() => _isLoading = false);
+      }
+      // Background API sync — non-blocking, won't clear the list on failure.
+      try {
+        await _databaseService.syncPendingAssessments();
+      } catch (_) {
+        // API unavailable — local data is authoritative.
       }
     } catch (e) {
-      setState(() => _isLoading = false);
       if (mounted) {
+        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -218,37 +226,33 @@ class _AssessmentListScreenState extends State<AssessmentListScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _filteredAssessments.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          _searchController.text.isNotEmpty
-                              ? Icons.search_off
-                              : Icons.assignment,
-                          size: 64,
-                          color: Colors.grey,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          _searchController.text.isNotEmpty
-                              ? AppLocalizations.of(context)!.noAssessmentsFound
-                              : AppLocalizations.of(context)!.noAssessmentsYet,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _searchController.text.isNotEmpty
-                              ? AppLocalizations.of(context)!.adjustSearchTerms
-                              : AppLocalizations.of(
-                                  context,
-                                )!.createFirstAssessment,
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                      ],
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 24,
+                    ),
+                    child: EmptyStateWidget(
+                      icon: _searchController.text.isNotEmpty
+                          ? Icons.search_off_rounded
+                          : Icons.assignment_outlined,
+                      iconColor: const Color(0xFF667eea),
+                      title: _searchController.text.isNotEmpty
+                          ? AppLocalizations.of(context)!.noAssessmentsFound
+                          : AppLocalizations.of(context)!.noAssessmentsYet,
+                      subtitle: _searchController.text.isNotEmpty
+                          ? AppLocalizations.of(context)!.adjustSearchTerms
+                          : AppLocalizations.of(context)!.createFirstAssessment,
+                      actionLabel: _searchController.text.isEmpty
+                          ? AppLocalizations.of(context)!.newAssessment
+                          : null,
+                      onAction: _searchController.text.isEmpty
+                          ? () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const DSM5AssessmentScreen(),
+                                ),
+                              )
+                          : null,
                     ),
                   )
                 : RefreshIndicator(
@@ -353,7 +357,45 @@ class _AssessmentListScreenState extends State<AssessmentListScreen> {
                                 ),
                               ],
                             ),
-                            trailing: const Icon(Icons.arrow_forward_ios),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Countersignature status icon
+                                if (assessment.countersignatureStatus ==
+                                    'pending')
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 4),
+                                    child: Icon(
+                                      Icons.pending_actions_rounded,
+                                      size: 18,
+                                      color: Colors.orange.shade600,
+                                    ),
+                                  )
+                                else if (assessment.countersignatureStatus ==
+                                    'amendment_requested')
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 4),
+                                    child: Icon(
+                                      Icons.edit_note_rounded,
+                                      size: 18,
+                                      color: Colors.red.shade600,
+                                    ),
+                                  )
+                                else if (assessment.countersignatureStatus ==
+                                    'countersigned')
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 4),
+                                    child: Icon(
+                                      Icons.verified_user_rounded,
+                                      size: 18,
+                                      color: Colors.green.shade600,
+                                    ),
+                                  ),
+                                OverdueDot(assessment: assessment),
+                                const SizedBox(width: 4),
+                                const Icon(Icons.arrow_forward_ios),
+                              ],
+                            ),
                             onTap: () {
                               Navigator.push(
                                 context,

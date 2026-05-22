@@ -7,11 +7,14 @@ import '../models/consent_basis.dart';
 import '../models/consent_record.dart';
 import '../models/question.dart';
 import '../models/assessment.dart';
+import '../models/risk_level.dart';
 import '../services/assessment_questions.dart';
 import '../services/auth_service.dart';
+import '../services/countersignature_service.dart';
 import '../services/database_service.dart';
 import '../theme/app_theme.dart';
 import 'consent_gate_screen.dart';
+import 'countersignature_screen.dart';
 import 'dsm5_level2_assessment_screen.dart';
 
 class DSM5AssessmentScreen extends StatefulWidget {
@@ -36,6 +39,7 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
   bool _isSubmitting = false;
   bool _showPatientInfo = true;
   ConsentRecord? _consentRecord;
+  Assessment? _lastSavedAssessment; // used for post-save sign-off prompt
 
   late AnimationController _animationController;
 
@@ -206,7 +210,8 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
       };
 
       // Save to local database
-      await _saveToDatabase(assessmentData);
+      final saved = await _saveToDatabase(assessmentData);
+      _lastSavedAssessment = saved;
 
       if (mounted) {
         _showResultsDialog(totalScore, severity, domainScores, flaggedDomains);
@@ -227,7 +232,7 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
     }
   }
 
-  Future<void> _saveToDatabase(Map<String, dynamic> data) async {
+  Future<Assessment> _saveToDatabase(Map<String, dynamic> data) async {
     try {
       final assessment = Assessment(
         patientId: data['patient_id'],
@@ -254,7 +259,7 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
         isSynced: false,
       );
 
-      await DatabaseService().insertAssessment(assessment);
+      final id = await DatabaseService().insertAssessment(assessment);
       debugPrint('Assessment saved to database successfully');
 
       // Also save to SharedPreferences as backup/legacy support
@@ -262,6 +267,8 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
       final existingJson = prefs.getStringList('dsm5_assessments') ?? [];
       existingJson.add(jsonEncode(data));
       await prefs.setStringList('dsm5_assessments', existingJson);
+
+      return assessment.copyWith(id: id);
     } catch (e) {
       debugPrint('Error saving to database: $e');
       rethrow; // Re-throw to be caught by caller
@@ -408,7 +415,12 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              Navigator.pop(context, true);
+              final saved = _lastSavedAssessment;
+              if (saved != null && saved.riskLevel.countersignatureRecommended) {
+                _showCountersignaturePrompt(saved);
+              } else {
+                Navigator.pop(context, true);
+              }
             },
             child: const Text('Done'),
           ),
@@ -449,6 +461,45 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
               child: const Text('New Assessment'),
             ),
         ],
+      ),
+    );
+  }
+
+  /// Shown after saving a high/critical/moderate-risk assessment.
+  void _showCountersignaturePrompt(Assessment assessment) {
+    if (!mounted) return;
+    final required = assessment.riskLevel.requiresCountersignature;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _DSM5CountersignaturePromptSheet(
+        assessment: assessment,
+        required: required,
+        onCountersignNow: () {
+          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => CountersignatureScreen(assessment: assessment),
+            ),
+          );
+        },
+        onAddLater: () {
+          Navigator.pop(context);
+          if (assessment.id != null) {
+            CountersignatureService.instance
+                .requestCountersignature(assessment.id!)
+                .catchError(
+                  (e) => debugPrint('⚠️ requestCountersignature failed: $e'),
+                );
+          }
+          Navigator.pop(context, true);
+        },
+        onDone: () {
+          Navigator.pop(context);
+          Navigator.pop(context, true);
+        },
       ),
     );
   }
@@ -995,5 +1046,153 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
     _patientIdController.dispose();
     _animationController.dispose();
     super.dispose();
+  }
+}
+
+// =============================================================================
+// _DSM5CountersignaturePromptSheet — post-save bottom sheet for DSM-5.
+// =============================================================================
+class _DSM5CountersignaturePromptSheet extends StatelessWidget {
+  final Assessment assessment;
+  final bool required;
+  final VoidCallback onCountersignNow;
+  final VoidCallback onAddLater;
+  final VoidCallback onDone;
+
+  const _DSM5CountersignaturePromptSheet({
+    required this.assessment,
+    required this.required,
+    required this.onCountersignNow,
+    required this.onAddLater,
+    required this.onDone,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 24,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: required
+                        ? Colors.orange.shade50
+                        : Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    required
+                        ? Icons.warning_amber_rounded
+                        : Icons.info_outline_rounded,
+                    color: required
+                        ? Colors.orange.shade700
+                        : Colors.blue.shade600,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    required
+                        ? 'Countersignature required'
+                        : 'Countersignature recommended',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textDark,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: onCountersignNow,
+                icon: const Icon(Icons.verified_user_rounded),
+                label: Text(
+                  'Request countersignature now',
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: onAddLater,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: Text(
+                      'Add later',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: onDone,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: Text(
+                      'Done — skip',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

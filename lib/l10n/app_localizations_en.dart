@@ -166,4 +166,28 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get capacityFluctuating =>
       'Fluctuating capacity - reassessment needed';
+
+  @override
+  String get patientProfiles => 'Patient Profiles';
+
+  @override
+  String get patientProfilesDesc => 'Case history';
+
+  @override
+  String get analytics => 'Analytics';
+
+  @override
+  String get analyticsDesc => 'View statistics';
+
+  @override
+  String get activity => 'Activity';
+
+  @override
+  String get logout => 'Logout';
+
+  @override
+  String get analyticsDashboard => 'Analytics Dashboard';
+
+  @override
+  String get noDataAvailable => 'No data available';
 }

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../services/statistics_service.dart';
 import '../theme/app_theme.dart';
+import 'package:mental_capacity_assessment/l10n/app_localizations.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -48,7 +49,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Analytics Dashboard'),
+        title: Text(AppLocalizations.of(context)!.analyticsDashboard),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -59,7 +60,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _dashboardStats == null
-          ? const Center(child: Text('No data available'))
+          ? Center(child: Text(AppLocalizations.of(context)!.noDataAvailable))
           : RefreshIndicator(
               onRefresh: _loadAnalytics,
               child: SingleChildScrollView(

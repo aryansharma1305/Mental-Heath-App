@@ -110,7 +110,7 @@ class SqlCipherPlainDatabaseMigrationExecutor
         'ATTACH DATABASE ${_sqlLiteral(encryptedPath)} AS encrypted KEY ${_sqlLiteral(key)}',
       );
       encryptedAttached = true;
-      await plainDb.execute("SELECT sqlcipher_export('encrypted')");
+      await plainDb.rawQuery("SELECT sqlcipher_export('encrypted')");
       await plainDb.execute('PRAGMA encrypted.user_version = $userVersion');
     } finally {
       if (plainDb != null && encryptedAttached) {

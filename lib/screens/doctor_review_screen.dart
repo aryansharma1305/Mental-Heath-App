@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../services/supabase_service.dart';
+import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../models/assessment.dart';
 import '../models/user.dart' as app_models;
@@ -15,7 +15,7 @@ class DoctorReviewScreen extends StatefulWidget {
 }
 
 class _DoctorReviewScreenState extends State<DoctorReviewScreen> {
-  final SupabaseService _supabaseService = SupabaseService();
+  final ApiService _apiService = ApiService();
   final AuthService _authService = AuthService();
 
   List<Assessment> _allAssessments = [];
@@ -34,12 +34,12 @@ class _DoctorReviewScreenState extends State<DoctorReviewScreen> {
   Future<void> _loadAssessments() async {
     setState(() => _isLoading = true);
     try {
-      if (SupabaseService.isAvailable) {
+      try {
         final userId = await _authService.getCurrentUserId();
 
         if (userId != null) {
           // Load only assessments created by this doctor
-          _allAssessments = await _supabaseService.getAssessmentsByAssessorId(
+          _allAssessments = await _apiService.getAssessmentsByAssessorId(
             userId,
           );
         } else {
@@ -50,7 +50,7 @@ class _DoctorReviewScreenState extends State<DoctorReviewScreen> {
         for (var assessment in _allAssessments) {
           if (assessment.patientId.isNotEmpty &&
               !_patientCache.containsKey(assessment.patientId)) {
-            final patient = await _supabaseService.getUserById(
+            final patient = await _apiService.getUserById(
               assessment.patientId,
             );
             if (patient != null) {
@@ -60,6 +60,9 @@ class _DoctorReviewScreenState extends State<DoctorReviewScreen> {
         }
 
         _applyFilters();
+      } catch (e) {
+        // Handle error or fallback
+        _allAssessments = [];
       }
     } catch (e) {
       debugPrint('Error loading assessments: $e');

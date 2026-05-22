@@ -4,13 +4,22 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/assessment.dart';
+import '../models/assessment_template.dart';
+import '../models/risk_level.dart';
+import '../services/countersignature_service.dart';
 import '../services/mhca_assessment_questions.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
+import '../services/reminder_service.dart';
+import '../services/template_service.dart';
 import '../theme/app_theme.dart';
+import 'countersignature_screen.dart';
 
 class MHCAAssessmentScreen extends StatefulWidget {
-  const MHCAAssessmentScreen({super.key});
+  /// Optional template to pre-fill non-clinical context fields.
+  final AssessmentTemplate? initialTemplate;
+
+  const MHCAAssessmentScreen({super.key, this.initialTemplate});
 
   @override
   State<MHCAAssessmentScreen> createState() => _MHCAAssessmentScreenState();
@@ -41,6 +50,9 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
       0; // 0=patientInfo, 1=gate, 2=sec1, 3=sec2, 4=sec3, 5=sec4, 6=consent
   bool _isSubmitting = false;
 
+  /// Template applied to this assessment — used to record usage after save.
+  String? _appliedTemplateId;
+
   // Steps labelling
   final List<String> _stepTitles = [
     'Patient Information',
@@ -55,6 +67,33 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
   int get _totalSteps => _stepTitles.length;
 
   @override
+  void initState() {
+    super.initState();
+    _applyTemplate(widget.initialTemplate);
+  }
+
+  /// Pre-fills non-clinical context fields from [template].
+  void _applyTemplate(AssessmentTemplate? template) {
+    if (template == null) return;
+    _appliedTemplateId = template.id;
+    if (template.defaultClinician != null &&
+        template.defaultClinician!.isNotEmpty) {
+      _doctorNameController.text = template.defaultClinician!;
+    }
+    if (template.defaultPurpose != null &&
+        template.defaultPurpose!.isNotEmpty) {
+      _purpose = template.defaultPurpose!;
+    }
+    if (template.contextualNote != null &&
+        template.contextualNote!.isNotEmpty) {
+      // Contextual note seeds the place-of-assessment field if it is empty.
+      if (_placeController.text.isEmpty) {
+        _placeController.text = template.contextualNote!;
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _ageSexController.dispose();
@@ -67,6 +106,7 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
     _pageController.dispose();
     super.dispose();
   }
+
 
   void _goToStep(int step) {
     setState(() => _currentStep = step);
@@ -279,6 +319,27 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
 
       await DatabaseService().insertAssessment(assessment);
 
+      // Capture the saved assessment (with its assigned id) for sign-off.
+      final savedAssessment = assessment;
+
+      // Record template usage — fire-and-forget, never blocks the save.
+      if (_appliedTemplateId != null) {
+        TemplateService.instance
+            .recordUsage(_appliedTemplateId!)
+            .catchError((e) => debugPrint('⚠️ Template recordUsage failed: $e'));
+      }
+
+      // Schedule follow-up reminder based on risk level.
+      // Fire-and-forget: a reminder failure must never block the clinical save.
+      ReminderService.instance
+          .scheduleFollowUp(
+            assessment: assessment,
+            patientName: _nameController.text.trim(),
+          )
+          .catchError(
+            (e) => debugPrint('⚠️ Reminder scheduling failed: $e'),
+          );
+
       // Also save to SharedPreferences as backup
       final prefs = await SharedPreferences.getInstance();
       final existing = prefs.getStringList('mhca_assessments') ?? [];
@@ -286,7 +347,7 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
       await prefs.setStringList('mhca_assessments', existing);
 
       if (mounted) {
-        _showResultsDialog(determination);
+        _showResultsDialog(determination, savedAssessment);
       }
     } catch (e) {
       if (mounted) {
@@ -297,7 +358,7 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
     }
   }
 
-  void _showResultsDialog(String determination) {
+  void _showResultsDialog(String determination, Assessment savedAssessment) {
     final hasCapacity = determination.contains('Has capacity');
 
     showDialog(
@@ -381,9 +442,24 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              Navigator.pop(context, true);
+              // Show countersignature prompt if risk level requires/recommends it.
+              if (savedAssessment.riskLevel.countersignatureRecommended) {
+                _showCountersignaturePrompt(savedAssessment);
+              } else {
+                Navigator.pop(context, true);
+              }
             },
             child: const Text('Done'),
+          ),
+          TextButton(
+            onPressed: () => _showSaveAsTemplateDialog(context),
+            child: Text(
+              'Save as template',
+              style: GoogleFonts.inter(
+                color: AppTheme.primaryColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
@@ -399,6 +475,174 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
       ),
     );
   }
+
+  /// Shown after saving a high/critical/moderate-risk assessment.
+  /// Lets the clinician choose: export PDF, countersign now, or add later.
+  void _showCountersignaturePrompt(Assessment assessment) {
+    if (!mounted) return;
+    final required = assessment.riskLevel.requiresCountersignature;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _CountersignaturePromptSheet(
+        assessment: assessment,
+        required: required,
+        onCountersignNow: () {
+          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  CountersignatureScreen(assessment: assessment),
+            ),
+          );
+        },
+        onAddLater: () {
+          Navigator.pop(context);
+          if (assessment.id != null) {
+            CountersignatureService.instance
+                .requestCountersignature(assessment.id!)
+                .catchError(
+                  (e) => debugPrint('⚠️ requestCountersignature failed: $e'),
+                );
+          }
+          Navigator.pop(context, true);
+        },
+        onDone: () {
+          Navigator.pop(context);
+          Navigator.pop(context, true);
+        },
+      ),
+    );
+  }
+
+  /// Shows a dialog to save the just-completed assessment as a workflow
+  /// template.  Only non-clinical, non-patient fields are persisted.
+  void _showSaveAsTemplateDialog(BuildContext parentDialogContext) {
+    final nameCtrl = TextEditingController();
+    showDialog<void>(
+      context: parentDialogContext,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Save as template',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: 'Template name',
+                hintText: 'e.g. Ward round — capacity check',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: AppTheme.backgroundColor,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppTheme.skyBlue,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: AppTheme.infoBlue,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Templates save workflow defaults only \u2014 not patient data or clinical scores.',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: AppTheme.infoBlue,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.inter(color: AppTheme.textGrey),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final name = nameCtrl.text.trim();
+              if (name.isEmpty) return;
+              Navigator.pop(ctx);
+
+              // Build a lightweight stub Assessment to feed fromAssessment.
+              // Only the fields that fromAssessment actually reads are set.
+              final stub = Assessment(
+                patientId: '',
+                patientName: '',
+                assessmentDate: DateTime.now(),
+                assessorName: _doctorNameController.text.trim(),
+                assessorRole: '',
+                decisionContext: _purpose,
+                responses: const {},
+                overallCapacity: '',
+                recommendations: '',
+                createdAt: DateTime.now(),
+                updatedAt: DateTime.now(),
+                consentRecordedBy: _doctorNameController.text.trim(),
+              );
+
+              final template = TemplateService.instance.fromAssessment(
+                stub,
+                name,
+              );
+              await TemplateService.instance.saveTemplate(template);
+
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Template \u201c$name\u201d saved.'),
+                    behavior: SnackBarBehavior.floating,
+                    backgroundColor: AppTheme.successGreen,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+            ),
+            child: Text(
+              'Save',
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
 
   Widget _buildResultRow(String label, String value) {
     return Padding(
@@ -1408,5 +1652,168 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
         ],
       ),
     ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.05, end: 0);
+  }
+}
+
+// =============================================================================
+// _CountersignaturePromptSheet — post-save bottom sheet
+// Shown after completing a high / critical / moderate-risk assessment.
+// =============================================================================
+class _CountersignaturePromptSheet extends StatelessWidget {
+  final Assessment assessment;
+  final bool required;
+  final VoidCallback onCountersignNow;
+  final VoidCallback onAddLater;
+  final VoidCallback onDone;
+
+  const _CountersignaturePromptSheet({
+    required this.assessment,
+    required this.required,
+    required this.onCountersignNow,
+    required this.onAddLater,
+    required this.onDone,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 24,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: required
+                        ? Colors.orange.shade50
+                        : Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    required
+                        ? Icons.warning_amber_rounded
+                        : Icons.info_outline_rounded,
+                    color: required
+                        ? Colors.orange.shade700
+                        : Colors.blue.shade600,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        required
+                            ? 'Countersignature required'
+                            : 'Countersignature recommended',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textDark,
+                        ),
+                      ),
+                      Text(
+                        '${assessment.riskLevel.label} risk assessment',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: assessment.riskLevel.color,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: onCountersignNow,
+                icon: const Icon(Icons.verified_user_rounded),
+                label: Text(
+                  'Request countersignature now',
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: onAddLater,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: Text(
+                      'Add later',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: onDone,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: Text(
+                      'Done — skip',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

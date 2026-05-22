@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../models/assessment.dart';
+import 'package:mental_capacity_assessment/l10n/app_localizations.dart';
 import '../models/clinical_note.dart';
 import '../models/consent_basis.dart';
 import '../models/patient_profile.dart';
@@ -15,6 +16,7 @@ import '../services/database_service.dart';
 import '../services/export/csv_export_service.dart';
 import '../theme/app_theme.dart';
 import 'assessment_detail_screen.dart';
+import '../widgets/empty_state_widget.dart';
 
 class PatientProfilesScreen extends StatefulWidget {
   const PatientProfilesScreen({super.key});
@@ -68,7 +70,7 @@ class _PatientProfilesScreenState extends State<PatientProfilesScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF6F4EF),
       appBar: AppBar(
-        title: const Text('Patient Profiles'),
+        title: Text(AppLocalizations.of(context)!.patientProfiles),
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: AppTheme.textDark,
@@ -141,24 +143,16 @@ class _PatientProfilesScreenState extends State<PatientProfilesScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: const Column(
-        children: [
-          Icon(Icons.person_search_outlined, size: 44, color: Colors.grey),
-          SizedBox(height: 12),
-          Text('No patient profiles yet'),
-          SizedBox(height: 6),
-          Text(
-            'Profiles are created automatically when an assessment is saved.',
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
+    final isSearching = _query.trim().isNotEmpty;
+    return EmptyStateWidget(
+      icon: isSearching
+          ? Icons.search_off_rounded
+          : Icons.person_add_alt_1_outlined,
+      iconColor: const Color(0xFF667eea),
+      title: isSearching ? 'No results' : 'No patient profiles yet',
+      subtitle: isSearching
+          ? 'Try a different name or patient ID'
+          : 'Profiles are created automatically when you save your first assessment',
     );
   }
 

@@ -8,7 +8,7 @@ import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:crypto/crypto.dart';
 import '../models/user.dart' as app_models;
 import '../models/user_role.dart';
-import 'supabase_service.dart';
+import 'api_service.dart';
 import 'database_service.dart';
 
 // Helper for secure storage with macOS fallback
@@ -84,7 +84,7 @@ class AuthService {
   static final AuthService _instance = AuthService._internal();
   factory AuthService() => _instance;
   AuthService._internal();
-  final SupabaseService _supabaseService = SupabaseService();
+  final ApiService _apiService = ApiService();
 
   String? _currentToken;
   Map<String, dynamic>? _currentUser;
@@ -124,8 +124,7 @@ class AuthService {
     try {
       final hashedPassword = _hashPassword(password);
 
-      // Get user from Supabase
-      final user = await _supabaseService.getUserByUsername(username);
+      final user = await _apiService.getUserByUsername(username);
 
       if (user != null) {
         // Verify password - check local database for password hash
@@ -161,7 +160,7 @@ class AuthService {
         }
       }
     } catch (e) {
-      // Supabase failed, try local
+      // API failed, try local
     }
 
     // Fallback to local authentication (offline mode)
@@ -196,24 +195,22 @@ class AuthService {
       userRole = UserRole.patient; // Default to patient
     }
 
-    // Try Supabase first (only if available)
-    if (SupabaseService.isAvailable) {
-      try {
-        // Check if user already exists in Supabase
-        final existingUser = await _supabaseService.getUserByUsername(username);
-        if (existingUser != null) {
-          return {'success': false, 'message': 'Username already exists'};
-        }
+    try {
+      // Check if user already exists in API
+      final existingUser = await _apiService.getUserByUsername(username);
+      if (existingUser != null) {
+        return {'success': false, 'message': 'Username already exists'};
+      }
 
-        // Create user in Supabase
-        final user = await _supabaseService.createUser(
-          username: username,
-          email: email,
-          fullName: fullName,
-          role: userRole,
-          department: department,
-          passwordHash: hashedPassword,
-        );
+      // Create user in API
+      final user = await _apiService.createUser(
+        username: username,
+        email: email,
+        fullName: fullName,
+        role: userRole,
+        department: department,
+        passwordHash: hashedPassword,
+      );
 
         // Also save to local database for offline access
         await _databaseService.insertUser(user);
@@ -248,11 +245,10 @@ class AuthService {
           'user': _currentUser,
         };
       } catch (e) {
-        // Supabase failed, log error and fall back to local registration
-        debugPrint('⚠️ Supabase registration failed: $e');
+        // API failed, log error and fall back to local registration
+        debugPrint('⚠️ API registration failed: $e');
         debugPrint('Falling back to local registration');
       }
-    }
 
     // Fallback to local registration (offline mode)
     return await _localRegister(

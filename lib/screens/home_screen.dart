@@ -5,11 +5,13 @@ import 'package:intl/intl.dart';
 import 'package:mental_capacity_assessment/l10n/app_localizations.dart';
 import '../models/assessment.dart';
 import '../models/user_role.dart';
+import '../services/countersignature_service.dart';
 import '../services/database_service.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import 'assessment_list_screen.dart';
 import 'assessment_detail_screen.dart';
+import 'countersignature_screen.dart';
 import 'doctor_review_screen.dart';
 import 'admin_panel_screen.dart';
 import 'profile_screen.dart';
@@ -20,6 +22,7 @@ import 'dsm5_responses_screen.dart';
 import 'mhca_assessment_screen.dart';
 import 'mhca_responses_screen.dart';
 import 'patient_profiles_screen.dart';
+import '../widgets/empty_state_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -35,6 +38,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   String _userName = '';
   UserRole _userRole = UserRole.patient;
   List<Assessment> _recentAssessments = [];
+  List<Assessment> _pendingSignoffs = [];
   bool _isLoading = true;
   late AnimationController _animationController;
   late AnimationController _floatingController;
@@ -79,8 +83,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Future<void> _loadDashboardData() async {
     try {
       final assessments = await _databaseService.getAllAssessments();
+      final pending = await CountersignatureService.instance.pendingSignOffs();
       setState(() {
         _recentAssessments = assessments.take(10).toList();
+        _pendingSignoffs = pending;
         _isLoading = false;
       });
     } catch (e) {
@@ -373,6 +379,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
           const SizedBox(height: 16),
 
+          // Pending countersignatures section
+          if (_pendingSignoffs.isNotEmpty)
+            _buildPendingSignoffSection(),
+
+          const SizedBox(height: 16),
+
           // Recent Assessments
           _buildRecentAssessments(),
 
@@ -552,8 +564,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         },
         {
           'icon': Icons.folder_shared_outlined,
-          'title': 'Patient Profiles',
-          'subtitle': 'Case history',
+          'title': AppLocalizations.of(context)!.patientProfiles,
+          'subtitle': AppLocalizations.of(context)!.patientProfilesDesc,
           'onTap': () {
             Navigator.push(
               context,
@@ -565,8 +577,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         },
         {
           'icon': Icons.analytics_outlined,
-          'title': 'Analytics',
-          'subtitle': 'View statistics',
+          'title': AppLocalizations.of(context)!.analytics,
+          'subtitle': AppLocalizations.of(context)!.analyticsDesc,
           'onTap': () {
             Navigator.push(
               context,
@@ -652,8 +664,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         },
         {
           'icon': Icons.folder_shared_outlined,
-          'title': 'Patient Profiles',
-          'subtitle': 'Case history',
+          'title': AppLocalizations.of(context)!.patientProfiles,
+          'subtitle': AppLocalizations.of(context)!.patientProfilesDesc,
           'onTap': () {
             Navigator.push(
               context,
@@ -665,8 +677,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         },
         {
           'icon': Icons.analytics_outlined,
-          'title': 'Analytics',
-          'subtitle': 'System stats',
+          'title': AppLocalizations.of(context)!.analytics,
+          'subtitle': AppLocalizations.of(context)!.analyticsDesc,
           'onTap': () {
             Navigator.push(
               context,
@@ -676,6 +688,131 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         },
       ];
     }
+  }
+
+  Widget _buildPendingSignoffSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade600,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Awaiting countersignature',
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textDark,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${_pendingSignoffs.length}',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.orange.shade800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 110,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _pendingSignoffs.length,
+              separatorBuilder: (_, idx) => const SizedBox(width: 12),
+              itemBuilder: (_, i) {
+                final a = _pendingSignoffs[i];
+                return GestureDetector(
+                  onTap: () async {
+                    final done = await Navigator.push<bool>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => CountersignatureScreen(assessment: a),
+                      ),
+                    );
+                    if (done == true) _loadDashboardData();
+                  },
+                  child: Container(
+                    width: 220,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                          color: Colors.orange.shade200, width: 1.5),
+                      boxShadow: AppTheme.softShadow,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.pending_actions_rounded,
+                                size: 16, color: Colors.orange.shade600),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                a.patientName,
+                                style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 14,
+                                  color: AppTheme.textDark,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          a.decisionContext,
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            color: Colors.grey.shade600,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Tap to countersign →',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.orange.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    ).animate().fadeIn(delay: 500.ms);
   }
 
   Widget _buildRecentAssessments() {
@@ -689,45 +826,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
 
     if (_recentAssessments.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(40),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: AppTheme.softShadow,
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: EmptyStateWidget(
+          icon: Icons.assignment_outlined,
+          iconColor: AppTheme.primaryColor,
+          title: AppLocalizations.of(context)!.noAssessmentsYet,
+          subtitle: AppLocalizations.of(context)!.createFirstAssessment,
+          actionLabel: AppLocalizations.of(context)!.newAssessment,
+          onAction: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const DSM5AssessmentScreen(),
+            ),
+          ),
         ),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppTheme.softPink,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.assignment_outlined,
-                size: 48,
-                color: AppTheme.primaryColor,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No assessments yet',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textDark,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Start your first assessment using the button above',
-              style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textGrey),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ).animate().fadeIn(delay: 900.ms).scale();
+      );
     }
 
     return Column(
@@ -805,13 +919,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             children: [
               _NavBarItem(
                 icon: Icons.home_rounded,
-                label: 'Home',
+                label: AppLocalizations.of(context)!.home,
                 isSelected: _selectedIndex == 0,
                 onTap: () => setState(() => _selectedIndex = 0),
               ),
               _NavBarItem(
                 icon: Icons.list_alt_rounded,
-                label: 'Activity',
+                label: AppLocalizations.of(context)!.activity,
                 isSelected: _selectedIndex == 1,
                 onTap: () {
                   setState(() => _selectedIndex = 1);
@@ -826,7 +940,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               const SizedBox(width: 64), // Space for FAB
               _NavBarItem(
                 icon: Icons.person_rounded,
-                label: 'Profile',
+                label: AppLocalizations.of(context)!.profile,
                 isSelected: _selectedIndex == 2,
                 onTap: () {
                   setState(() => _selectedIndex = 2);
@@ -840,7 +954,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
               _NavBarItem(
                 icon: Icons.logout_rounded,
-                label: 'Logout',
+                label: AppLocalizations.of(context)!.logout,
                 isSelected: false,
                 onTap: _logout,
               ),

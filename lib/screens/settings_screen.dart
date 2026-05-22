@@ -11,6 +11,8 @@ import '../services/app_lock_service.dart';
 import '../services/database_service.dart';
 import '../services/export/csv_export_service.dart';
 import '../main.dart';
+import 'template_management_screen.dart';
+import 'onboarding_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -464,6 +466,77 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             const SizedBox(height: 24),
 
+            // ── Workflow section ──────────────────────────────────────────
+            Text(
+              'Workflow',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textDark,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: AppTheme.softShadow,
+              ),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const TemplateManagementScreen(),
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.bookmark_outlined,
+                          color: AppTheme.primaryColor,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Assessment Templates',
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.textDark,
+                              ),
+                            ),
+                            Text(
+                              'Manage workflow presets for clinician and consent fields',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: AppTheme.textGrey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.chevron_right, color: AppTheme.textGrey),
+                    ],
+                  ),
+                ),
+              ),
+            ).animate().fadeIn(delay: 80.ms),
+
+            const SizedBox(height: 24),
+
             Text(
               'Security',
               style: GoogleFonts.poppins(
@@ -657,6 +730,125 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ).animate().fadeIn(delay: 300.ms),
 
+            const SizedBox(height: 24),
+
+            // ── About ────────────────────────────────────────────────────────
+            Text(
+              'About',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textDark,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: AppTheme.softShadow,
+              ),
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.skyBlue,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.info_outline_rounded,
+                        size: 18,
+                        color: AppTheme.infoBlue,
+                      ),
+                    ),
+                    title: Text(
+                      'Version',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textDark,
+                      ),
+                    ),
+                    trailing: Text(
+                      'v1.0.0 (build 1)',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: AppTheme.textGrey,
+                      ),
+                    ),
+                  ),
+                  const Divider(height: 1, indent: 56),
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.softPink,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.privacy_tip_outlined,
+                        size: 18,
+                        color: AppTheme.primaryColor,
+                      ),
+                    ),
+                    title: Text(
+                      'Privacy & Data',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textDark,
+                      ),
+                    ),
+                    trailing: Icon(
+                      Icons.chevron_right,
+                      color: AppTheme.textGrey,
+                    ),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const _PrivacyScreen(),
+                      ),
+                    ),
+                  ),
+                  const Divider(height: 1, indent: 56),
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEEF2FF),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.auto_stories_outlined,
+                        size: 18,
+                        color: Color(0xFF667eea),
+                      ),
+                    ),
+                    title: Text(
+                      'Re-run onboarding',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textDark,
+                      ),
+                    ),
+                    trailing: Icon(
+                      Icons.chevron_right,
+                      color: AppTheme.textGrey,
+                    ),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const OnboardingScreen(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ).animate().fadeIn(delay: 450.ms),
+
             const SizedBox(height: 32),
 
             Center(
@@ -713,6 +905,120 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
       ],
+    );
+  }
+}
+
+// =============================================================================
+// Privacy & Data screen
+// =============================================================================
+
+class _PrivacyScreen extends StatelessWidget {
+  const _PrivacyScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
+      appBar: AppBar(
+        title: Text(
+          'Privacy & Data',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+        ),
+        backgroundColor: Colors.white,
+        foregroundColor: AppTheme.textDark,
+        elevation: 0,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          _PrivacyCard(
+            icon: Icons.phone_android_rounded,
+            color: const Color(0xFF06D6A0),
+            title: 'Data stored on this device only',
+            body: 'All assessment records, patient profiles, and clinical notes are stored exclusively in an encrypted SQLite database on this device. No data is automatically transmitted to external servers.',
+          ),
+          const SizedBox(height: 12),
+          _PrivacyCard(
+            icon: Icons.enhanced_encryption_rounded,
+            color: const Color(0xFF667eea),
+            title: 'AES-256 encryption at rest',
+            body: 'The local database is encrypted with SQLCipher (AES-256-CBC). Assessment data cannot be read from the device storage without the application decryption key.',
+          ),
+          const SizedBox(height: 12),
+          _PrivacyCard(
+            icon: Icons.receipt_long_outlined,
+            color: const Color(0xFFFFD166),
+            title: 'Immutable audit trail',
+            body: 'Clinical scores and patient responses are locked at the point of submission. Amendments are tracked with a full countersignature chain and timestamped author record.',
+          ),
+          const SizedBox(height: 12),
+          _PrivacyCard(
+            icon: Icons.share_outlined,
+            color: const Color(0xFFEF476F),
+            title: 'Export under your control',
+            body: 'PDF and CSV exports are generated on-device and shared through the OS share sheet. You choose where they go — the app does not transmit them independently.',
+          ),
+          const SizedBox(height: 12),
+          _PrivacyCard(
+            icon: Icons.delete_forever_outlined,
+            color: AppTheme.textGrey,
+            title: 'Right to erasure',
+            body: 'All data can be permanently deleted at any time via Settings → Clear All Data. This action is irreversible.',
+          ),
+          const SizedBox(height: 32),
+          Center(
+            child: Text(
+              'This app does not collect analytics, crash reports, or any telemetry.\nNo account or internet connection is required.',
+              style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textGrey, height: 1.6),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+}
+
+class _PrivacyCard extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String body;
+
+  const _PrivacyCard({required this.icon, required this.color, required this.title, required this.body});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 3))],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+            child: Icon(icon, size: 22, color: color),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textDark)),
+                const SizedBox(height: 4),
+                Text(body, style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textMedium, height: 1.5)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

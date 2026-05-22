@@ -47,5 +47,13 @@
     "statusUnknown": "Unknown",
     "capacityCapable": "Has capacity for this decision",
     "capacityIncapable": "Lacks capacity for this decision",
-    "capacityFluctuating": "Fluctuating capacity - reassessment needed"
+    "capacityFluctuating": "Fluctuating capacity - reassessment needed",
+    "patientProfiles": "Patient Profiles",
+    "patientProfilesDesc": "Case history",
+    "analytics": "Analytics",
+    "analyticsDesc": "View statistics",
+    "activity": "Activity",
+    "logout": "Logout",
+    "analyticsDashboard": "Analytics Dashboard",
+    "noDataAvailable": "No data available"
 }

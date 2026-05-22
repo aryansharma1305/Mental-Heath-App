@@ -9,12 +9,16 @@ class ConsentGateScreen extends StatefulWidget {
   final String patientLabel;
   final String assessmentType;
   final String recordedBy;
+  /// Optional consent basis suggested by a template.
+  /// The clinician can override this selection before confirming.
+  final ConsentBasis? initialBasis;
 
   const ConsentGateScreen({
     super.key,
     required this.patientLabel,
     required this.assessmentType,
     required this.recordedBy,
+    this.initialBasis,
   });
 
   @override
@@ -31,6 +35,9 @@ class _ConsentGateScreenState extends State<ConsentGateScreen> {
   void initState() {
     super.initState();
     _recordedByController.text = widget.recordedBy;
+    if (widget.initialBasis != null) {
+      _basis = widget.initialBasis!;
+    }
   }
 
   @override

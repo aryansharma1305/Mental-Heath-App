@@ -1,165 +1,218 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../models/assessment_template.dart';
-import '../services/supabase_service.dart';
+
 import '../theme/app_theme.dart';
-import 'patient_assessment_screen.dart';
+import '../widgets/template_picker_sheet.dart';
+import 'mhca_assessment_screen.dart';
+import 'consent_gate_screen.dart';
+import 'dsm5_assessment_screen.dart';
 
-class SelectAssessmentScreen extends StatefulWidget {
+/// Assessment type selection screen.
+///
+/// Replaces the legacy Supabase-backed template list with direct type cards.
+/// Tapping "MHCA" shows the workflow template picker before navigation.
+class SelectAssessmentScreen extends StatelessWidget {
   const SelectAssessmentScreen({super.key});
-
-  @override
-  State<SelectAssessmentScreen> createState() => _SelectAssessmentScreenState();
-}
-
-class _SelectAssessmentScreenState extends State<SelectAssessmentScreen> {
-  final SupabaseService _supabaseService = SupabaseService();
-  List<AssessmentTemplate> _templates = [];
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadTemplates();
-  }
-
-  Future<void> _loadTemplates() async {
-    setState(() => _isLoading = true);
-    try {
-      if (SupabaseService.isAvailable) {
-        _templates = await _supabaseService.getAllTemplates();
-      }
-    } catch (e) {
-      debugPrint('Error loading templates: $e');
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Select Assessment')),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _templates.isEmpty
-          ? Center(
+      backgroundColor: AppTheme.backgroundColor,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: AppTheme.textDark,
+        leading: IconButton(
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: AppTheme.softShadow,
+            ),
+            child: const Icon(Icons.arrow_back, color: AppTheme.textDark),
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'New Assessment',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w600,
+            color: AppTheme.textDark,
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            Text(
+              'Choose assessment type',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: AppTheme.textGrey,
+              ),
+            ),
+            const SizedBox(height: 16),
+            _AssessmentTypeCard(
+              icon: Icons.psychology,
+              title: 'MHCA Assessment',
+              subtitle: 'Mental Health Capacity Assessment (MHCA 2017)',
+              gradient: AppTheme.primaryGradient,
+              delay: 0,
+              onTap: () => _startMhca(context),
+            ),
+            const SizedBox(height: 12),
+            _AssessmentTypeCard(
+              icon: Icons.medical_services_outlined,
+              title: 'DSM-5 Assessment',
+              subtitle: 'Cross-Cutting Symptom Measure',
+              gradient: AppTheme.pinkGradient,
+              delay: 60,
+              onTap: () => _startDsm5(context),
+            ),
+            const SizedBox(height: 12),
+            _AssessmentTypeCard(
+              icon: Icons.assignment_turned_in_outlined,
+              title: 'Capacity Assessment',
+              subtitle: 'Decision-making capacity evaluation',
+              gradient: const LinearGradient(
+                colors: [Color(0xFF11998e), Color(0xFF38ef7d)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              delay: 120,
+              onTap: () => _startCapacity(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Shows the template picker then navigates to the MHCA screen.
+  Future<void> _startMhca(BuildContext context) async {
+    // Show template picker — returns null if clinician taps Skip.
+    final template = await TemplatePickerSheet.show(
+      context,
+      assessmentType: 'MHCA',
+    );
+
+    if (!context.mounted) return;
+
+    // Navigate with or without template.
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MHCAAssessmentScreen(initialTemplate: template),
+      ),
+    );
+  }
+
+  void _startDsm5(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const DSM5AssessmentScreen()),
+    );
+  }
+
+  void _startCapacity(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ConsentGateScreen(
+          patientLabel: 'New patient',
+          assessmentType: 'Capacity Assessment',
+          recordedBy: '',
+        ),
+      ),
+    );
+  }
+}
+
+// ── Private tile widget ────────────────────────────────────────────────────
+
+class _AssessmentTypeCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Gradient gradient;
+  final int delay;
+  final VoidCallback onTap;
+
+  const _AssessmentTypeCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.gradient,
+    required this.delay,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: Colors.white, size: 26),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.assignment_outlined,
-                    size: 80,
-                    color: Colors.grey[300],
-                  ),
-                  const SizedBox(height: 16),
                   Text(
-                    'No assessments available',
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      color: Colors.grey[600],
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 2),
                   Text(
-                    'Please contact an administrator',
+                    subtitle,
                     style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: Colors.grey[500],
+                      fontSize: 12,
+                      color: Colors.white.withValues(alpha: 0.85),
                     ),
                   ),
                 ],
               ),
-            )
-          : RefreshIndicator(
-              onRefresh: _loadTemplates,
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: _templates.length,
-                itemBuilder: (context, index) {
-                  final template = _templates[index];
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: InkWell(
-                      onTap: () {
-                        if (template.id != null) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => PatientAssessmentScreen(
-                                templateId: template.id!,
-                              ),
-                            ),
-                          );
-                        }
-                      },
-                      borderRadius: BorderRadius.circular(16),
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    gradient: AppTheme.pinkGradient,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(
-                                    Icons.assignment,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        template.name,
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      if (template.description != null) ...[
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          template.description!,
-                                          style: GoogleFonts.inter(
-                                            fontSize: 14,
-                                            color: Colors.grey[600],
-                                          ),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                                const Icon(
-                                  Icons.arrow_forward_ios,
-                                  color: AppTheme.textGrey,
-                                  size: 20,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
             ),
-    );
+            Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.white.withValues(alpha: 0.7),
+              size: 18,
+            ),
+          ],
+        ),
+      ),
+    )
+        .animate(delay: delay.ms)
+        .fadeIn()
+        .slideY(begin: 0.06, end: 0, curve: Curves.easeOut);
   }
 }

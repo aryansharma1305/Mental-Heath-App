@@ -5,18 +5,35 @@ import '../models/assessment.dart';
 import '../models/clinical_note.dart';
 import '../models/consent_basis.dart';
 import '../models/consent_record.dart';
+import '../models/countersignature.dart';
 import '../models/patient_profile.dart';
 import '../models/risk_level.dart';
 import '../models/user.dart';
 import 'database_encryption_migration_service.dart';
 import 'encryption_service.dart';
 import 'risk_stratification_service.dart';
-import 'supabase_service.dart';
+import 'api_service.dart';
 
 class DatabaseService {
   static Database? _database;
   static const String _databaseName = 'mental_capacity_assessments.db';
-  static const int _databaseVersion = 8;
+  static const int _databaseVersion = 10;
+
+  /// Inject an alternate DatabaseFactory for unit/integration tests.
+  /// Call before the first access to `database`.
+  static DatabaseFactory? _testFactory;
+
+  // ignore: use_setters_to_change_properties
+  static void overrideFactoryForTesting(DatabaseFactory factory) {
+    _testFactory = factory;
+    _database = null; // ensure re-init with new factory
+  }
+
+  /// Reset the singleton so each test starts clean.
+  static void resetForTesting() {
+    _database = null;
+    _testFactory = null;
+  }
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -24,7 +41,20 @@ class DatabaseService {
     return _database!;
   }
 
+
   Future<Database> _initDatabase() async {
+    // Test mode: use the injected factory (sqflite_common_ffi, no encryption).
+    if (_testFactory != null) {
+      return await _testFactory!.openDatabase(
+        inMemoryDatabasePath,
+        options: OpenDatabaseOptions(
+          version: _databaseVersion,
+          onCreate: _onCreate,
+          onUpgrade: _onUpgrade,
+        ),
+      );
+    }
+    // Production: SQLCipher with encryption.
     String path = join(await getDatabasesPath(), _databaseName);
     final key = await EncryptionService().getDatabaseKey();
     await const DatabaseEncryptionMigrationService().migrateIfNeeded(path, key);
@@ -36,6 +66,7 @@ class DatabaseService {
       onUpgrade: _onUpgrade,
     );
   }
+
 
   Future<void> _onCreate(Database db, int version) async {
     // Assessments table
@@ -80,6 +111,8 @@ class DatabaseService {
         consent_recorded_by TEXT,
         assessment_status TEXT DEFAULT 'active',
         prior_assessment_id INTEGER,
+        countersignature_status TEXT,
+        amendment_note TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )
@@ -143,6 +176,36 @@ class DatabaseService {
         created_at TEXT NOT NULL,
         FOREIGN KEY (assessment_id) REFERENCES assessments(id),
         FOREIGN KEY (question_id) REFERENCES questions(id)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE assessment_templates(
+        id                            TEXT PRIMARY KEY,
+        name                          TEXT NOT NULL,
+        description                   TEXT,
+        assessment_type               TEXT NOT NULL,
+        default_clinician             TEXT,
+        default_consent_basis         TEXT,
+        contextual_note               TEXT,
+        follow_up_recommended_default INTEGER NOT NULL DEFAULT 0,
+        metadata                      TEXT,
+        created_at                    TEXT NOT NULL,
+        last_used_at                  TEXT,
+        use_count                     INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE countersignatures(
+        id               TEXT PRIMARY KEY,
+        assessment_id    INTEGER NOT NULL,
+        signatory_name   TEXT NOT NULL,
+        signatory_role   TEXT NOT NULL,
+        signed_at        TEXT NOT NULL,
+        outcome          TEXT NOT NULL,
+        notes            TEXT,
+        FOREIGN KEY (assessment_id) REFERENCES assessments(id)
       )
     ''');
   }
@@ -226,6 +289,14 @@ class DatabaseService {
     if (oldVersion < 8) {
       await _ensurePriorAssessmentColumn(db);
     }
+
+    if (oldVersion < 9) {
+      await _ensureAssessmentTemplatesTable(db);
+    }
+
+    if (oldVersion < 10) {
+      await _ensureCountersignatureSchemaV10(db);
+    }
   }
 
   Future<void> _ensureRiskLevelColumn(Database db) async {
@@ -273,6 +344,51 @@ class DatabaseService {
       // Column might already exist.
     }
   }
+
+  Future<void> _ensureAssessmentTemplatesTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS assessment_templates(
+        id                            TEXT PRIMARY KEY,
+        name                          TEXT NOT NULL,
+        description                   TEXT,
+        assessment_type               TEXT NOT NULL,
+        default_clinician             TEXT,
+        default_consent_basis         TEXT,
+        contextual_note               TEXT,
+        follow_up_recommended_default INTEGER NOT NULL DEFAULT 0,
+        metadata                      TEXT,
+        created_at                    TEXT NOT NULL,
+        last_used_at                  TEXT,
+        use_count                     INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+  }
+
+  Future<void> _ensureCountersignatureSchemaV10(Database db) async {
+    for (final stmt in [
+      'ALTER TABLE assessments ADD COLUMN countersignature_status TEXT',
+      'ALTER TABLE assessments ADD COLUMN amendment_note TEXT',
+    ]) {
+      try {
+        await db.execute(stmt);
+      } catch (_) {
+        // Column already exists — safe to ignore.
+      }
+    }
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS countersignatures(
+        id               TEXT PRIMARY KEY,
+        assessment_id    INTEGER NOT NULL,
+        signatory_name   TEXT NOT NULL,
+        signatory_role   TEXT NOT NULL,
+        signed_at        TEXT NOT NULL,
+        outcome          TEXT NOT NULL,
+        notes            TEXT,
+        FOREIGN KEY (assessment_id) REFERENCES assessments(id)
+      )
+    ''');
+  }
+
 
   Future<void> _createPatientTables(Database db) async {
     await db.execute('''
@@ -370,21 +486,17 @@ class DatabaseService {
         assessmentWithRisk.assessmentDate,
       );
 
-      // 2. Try to sync to Supabase if available
+      // 2. Try to sync to our new backend API
       try {
-        if (SupabaseService.isAvailable) {
-          final supabaseId = await SupabaseService().insertAssessment(
-            assessmentWithRisk,
+        final apiId = await ApiService().insertAssessment(assessmentWithRisk);
+        if (apiId != null) {
+          // Update local record to synced
+          await db.update(
+            'assessments',
+            {'is_synced': 1},
+            where: 'id = ?',
+            whereArgs: [id],
           );
-          if (supabaseId != null) {
-            // Update local record to synced
-            await db.update(
-              'assessments',
-              {'is_synced': 1},
-              where: 'id = ?',
-              whereArgs: [id],
-            );
-          }
         }
       } catch (e) {
         // Silent failure for sync - will be picked up by background sync later
@@ -522,11 +634,6 @@ class DatabaseService {
     try {
       debugPrint('SYNC: Starting syncPendingAssessments...');
 
-      if (!SupabaseService.isAvailable) {
-        debugPrint('SYNC: Supabase is NOT available. Skipping sync.');
-        return;
-      }
-
       // Get all unsynced assessments
       final List<Map<String, dynamic>> maps = await db.query(
         'assessments',
@@ -539,13 +646,11 @@ class DatabaseService {
         final assessment = Assessment.fromMap(map);
         try {
           debugPrint('SYNC: Attempting to sync assessment ${assessment.id}...');
-          final supabaseId = await SupabaseService().insertAssessment(
-            assessment,
-          );
+          final apiId = await ApiService().insertAssessment(assessment);
 
-          if (supabaseId != null) {
+          if (apiId != null) {
             debugPrint(
-              'SYNC: Assessment ${assessment.id} synced to Supabase (ID: $supabaseId)',
+              'SYNC: Assessment ${assessment.id} synced to API (ID: $apiId)',
             );
             await db.update(
               'assessments',
@@ -864,5 +969,70 @@ class DatabaseService {
       orderBy: 'assessment_date DESC',
     );
     return List.generate(maps.length, (i) => Assessment.fromMap(maps[i]));
+  }
+
+  // =========================================================================
+  // Countersignature query methods (Phase 4c)
+  // =========================================================================
+
+  /// Persist a new countersignature record.
+  Future<void> insertCountersignature(Countersignature cs) async {
+    final db = await database;
+    await db.insert(
+      'countersignatures',
+      cs.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Retrieve the countersignature for an assessment, or null if none exists.
+  Future<Countersignature?> getCountersignatureForAssessment(
+    int assessmentId,
+  ) async {
+    final db = await database;
+    final maps = await db.query(
+      'countersignatures',
+      where: 'assessment_id = ?',
+      whereArgs: [assessmentId],
+      orderBy: 'signed_at DESC',
+      limit: 1,
+    );
+    if (maps.isEmpty) return null;
+    return Countersignature.fromMap(maps.first);
+  }
+
+  /// Update the countersignature_status (and optionally amendment_note) on
+  /// an assessment row without touching any clinical data.
+  Future<void> updateAssessmentCountersignatureStatus(
+    int assessmentId,
+    String? status, {
+    String? amendmentNote,
+  }) async {
+    final db = await database;
+    final updateMap = <String, dynamic>{
+      'countersignature_status': status,
+      'updated_at': DateTime.now().toIso8601String(),
+    };
+    if (amendmentNote != null) {
+      updateMap['amendment_note'] = amendmentNote;
+    }
+    await db.update(
+      'assessments',
+      updateMap,
+      where: 'id = ?',
+      whereArgs: [assessmentId],
+    );
+  }
+
+  /// Return all assessments whose countersignature_status is 'pending'.
+  /// Used by the home screen "Awaiting countersignature" section.
+  Future<List<Assessment>> getAssessmentsAwaitingCountersignature() async {
+    final db = await database;
+    final maps = await db.query(
+      'assessments',
+      where: "countersignature_status = 'pending'",
+      orderBy: 'assessment_date DESC',
+    );
+    return maps.map(Assessment.fromMap).toList();
   }
 }

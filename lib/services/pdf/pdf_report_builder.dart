@@ -5,6 +5,7 @@ import 'package:pdf/widgets.dart' as pw;
 
 import '../../models/assessment.dart';
 import '../../models/consent_basis.dart';
+import '../../models/countersignature.dart';
 import '../../models/patient_profile.dart';
 import '../../models/risk_level.dart';
 import 'pdf_theme.dart';
@@ -25,6 +26,7 @@ class PdfReportBuilder {
     Assessment? priorAssessment,
     String? clinicalNote,
     DateTime? generatedAt,
+    Countersignature? countersignature,
   }) async {
     final doc = pw.Document();
     doc.addPage(
@@ -54,6 +56,7 @@ class PdfReportBuilder {
           PdfSignatureSection.build(
             clinicianName:
                 assessment.consentRecordedBy ?? assessment.assessorName,
+            countersignature: countersignature,
           ),
         ],
       ),

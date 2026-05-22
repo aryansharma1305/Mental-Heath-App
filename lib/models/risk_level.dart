@@ -38,3 +38,27 @@ RiskLevel riskLevelFromString(String? value) {
     orElse: () => RiskLevel.low,
   );
 }
+
+// ---------------------------------------------------------------------------
+// Sign-off requirement rules — drive countersignature prompts and badges.
+// high + critical require a countersignature; moderate recommends one.
+// ---------------------------------------------------------------------------
+extension SignOffRequirement on RiskLevel {
+  /// True when the assessment MUST have a countersignature before it is
+  /// considered clinically closed. Triggered for high and critical risk.
+  bool get requiresCountersignature => switch (this) {
+        RiskLevel.critical => true,
+        RiskLevel.high => true,
+        RiskLevel.moderate => false,
+        RiskLevel.low => false,
+      };
+
+  /// True when a countersignature is recommended but not strictly required.
+  /// Shown as a softer prompt after saving a moderate-risk assessment.
+  bool get countersignatureRecommended => switch (this) {
+        RiskLevel.critical => true,
+        RiskLevel.high => true,
+        RiskLevel.moderate => true,
+        RiskLevel.low => false,
+      };
+}

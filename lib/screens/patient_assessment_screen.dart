@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/question.dart';
-import '../services/supabase_service.dart';
+import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 
@@ -17,7 +17,7 @@ class PatientAssessmentScreen extends StatefulWidget {
 class _PatientAssessmentScreenState extends State<PatientAssessmentScreen> {
   final _formKey = GlobalKey<FormState>();
   final _pageController = PageController();
-  final SupabaseService _supabaseService = SupabaseService();
+  final ApiService _apiService = ApiService();
   final AuthService _authService = AuthService();
 
   List<Question> _questions = [];
@@ -35,40 +35,27 @@ class _PatientAssessmentScreenState extends State<PatientAssessmentScreen> {
   Future<void> _loadQuestions() async {
     try {
       // Load questions from the selected assessment template
-      if (SupabaseService.isAvailable) {
-        final template = await _supabaseService.getTemplateWithQuestions(
-          widget.templateId,
-        );
-        if (template != null && template.questions != null) {
-          setState(() {
-            _questions = template.questions!;
-            _isLoading = false;
-          });
-        } else {
-          setState(() => _isLoading = false);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Assessment template not found or has no questions.',
-                ),
-                backgroundColor: AppTheme.errorRed,
-              ),
-            );
-            Navigator.pop(context);
-          }
-        }
+      final templateData = await _apiService.getTemplateWithQuestions(
+        widget.templateId,
+      );
+      final questions = templateData?['questions'] as List<Question>?;
+      if (questions != null && questions.isNotEmpty) {
+        setState(() {
+          _questions = questions;
+          _isLoading = false;
+        });
       } else {
         setState(() => _isLoading = false);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
-                'Unable to connect to server. Please try again later.',
+                'Assessment template not found or has no questions.',
               ),
               backgroundColor: AppTheme.errorRed,
             ),
           );
+          Navigator.pop(context);
         }
       }
     } catch (e) {
@@ -160,35 +147,29 @@ class _PatientAssessmentScreenState extends State<PatientAssessmentScreen> {
         throw Exception('User not found');
       }
 
-      // Save each response to question_responses table in Supabase
-      if (SupabaseService.isAvailable) {
-        for (var question in _questions) {
-          final response = _responses[question.questionId];
-          if (response != null && question.id != null) {
-            await _supabaseService.saveQuestionResponse(
-              templateId: widget.templateId,
-              questionId: question.id!,
-              patientUserId: currentUser.id,
-              answer: response.toString(),
-            );
-          }
-        }
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Assessment submitted successfully! A healthcare professional will review it.',
-              ),
-              backgroundColor: AppTheme.accentGreen,
-            ),
+      // Save each response to question_responses table via API
+      for (var question in _questions) {
+        final response = _responses[question.questionId];
+        if (response != null && question.id != null) {
+          await _apiService.saveQuestionResponse(
+            templateId: widget.templateId,
+            questionId: question.id!,
+            patientUserId: currentUser.id,
+            answer: response.toString(),
           );
-          Navigator.pop(context, true);
         }
-      } else {
-        throw Exception(
-          'Unable to connect to server. Please check your internet connection.',
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Assessment submitted successfully! A healthcare professional will review it.',
+            ),
+            backgroundColor: AppTheme.accentGreen,
+          ),
         );
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {

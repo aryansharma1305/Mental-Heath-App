@@ -47,5 +47,13 @@
     "statusUnknown": "अज्ञात",
     "capacityCapable": "इस निर्णय के लिए क्षमता है",
     "capacityIncapable": "इस निर्णय के लिए क्षमता का अभाव है",
-    "capacityFluctuating": "उतार-चढ़ाव वाली क्षमता - पुनर्मूल्यांकन की आवश्यकता है"
+    "capacityFluctuating": "उतार-चढ़ाव वाली क्षमता - पुनर्मूल्यांकन की आवश्यकता है",
+    "patientProfiles": "रोगी प्रोफाइल",
+    "patientProfilesDesc": "केस इतिहास",
+    "analytics": "एनालिटिक्स",
+    "analyticsDesc": "आंकड़े देखें",
+    "activity": "गतिविधि",
+    "logout": "लॉग आउट",
+    "analyticsDashboard": "एनालिटिक्स डैशबोर्ड",
+    "noDataAvailable": "कोई डेटा उपलब्ध नहीं है"
 }

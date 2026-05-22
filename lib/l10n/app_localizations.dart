@@ -393,6 +393,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Fluctuating capacity - reassessment needed'**
   String get capacityFluctuating;
+
+  /// No description provided for @patientProfiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Patient Profiles'**
+  String get patientProfiles;
+
+  /// No description provided for @patientProfilesDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Case history'**
+  String get patientProfilesDesc;
+
+  /// No description provided for @analytics.
+  ///
+  /// In en, this message translates to:
+  /// **'Analytics'**
+  String get analytics;
+
+  /// No description provided for @analyticsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'View statistics'**
+  String get analyticsDesc;
+
+  /// No description provided for @activity.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity'**
+  String get activity;
+
+  /// No description provided for @logout.
+  ///
+  /// In en, this message translates to:
+  /// **'Logout'**
+  String get logout;
+
+  /// No description provided for @analyticsDashboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Analytics Dashboard'**
+  String get analyticsDashboard;
+
+  /// No description provided for @noDataAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No data available'**
+  String get noDataAvailable;
 }
 
 class _AppLocalizationsDelegate

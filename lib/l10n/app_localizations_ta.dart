@@ -165,4 +165,28 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get capacityFluctuating => 'மாறுபடும் திறன் - மறுமதிப்பீடு தேவை';
+
+  @override
+  String get patientProfiles => 'Patient Profiles';
+
+  @override
+  String get patientProfilesDesc => 'Case history';
+
+  @override
+  String get analytics => 'Analytics';
+
+  @override
+  String get analyticsDesc => 'View statistics';
+
+  @override
+  String get activity => 'Activity';
+
+  @override
+  String get logout => 'Logout';
+
+  @override
+  String get analyticsDashboard => 'Analytics Dashboard';
+
+  @override
+  String get noDataAvailable => 'No data available';
 }

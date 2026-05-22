@@ -3,8 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/question.dart';
 import '../models/assessment_template.dart';
 import '../services/question_service.dart';
-import '../services/supabase_service.dart';
-import '../services/auth_service.dart';
+import '../services/api_service.dart';
+import '../services/template_service.dart';
 import '../theme/app_theme.dart';
 
 class AdminPanelScreen extends StatefulWidget {
@@ -16,9 +16,8 @@ class AdminPanelScreen extends StatefulWidget {
 
 class _AdminPanelScreenState extends State<AdminPanelScreen>
     with SingleTickerProviderStateMixin {
-  final SupabaseService _supabaseService = SupabaseService();
+  final ApiService _apiService = ApiService();
   final QuestionService _questionService = QuestionService();
-  final AuthService _authService = AuthService();
 
   List<AssessmentTemplate> _templates = [];
   List<Question> _allQuestions = []; // All available questions
@@ -54,15 +53,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
   }
 
   Future<void> _loadTemplates() async {
-    if (SupabaseService.isAvailable) {
-      _templates = await _supabaseService.getAllTemplates();
-    }
+    _templates = await TemplateService.instance.getAllTemplates();
   }
 
   Future<void> _loadAllQuestions() async {
-    if (SupabaseService.isAvailable) {
-      _allQuestions = await _supabaseService.getAllQuestions();
-    } else {
+    try {
+      _allQuestions = await _apiService.getAllQuestions();
+      if (_allQuestions.isEmpty) _allQuestions = await _questionService.getAllQuestions();
+    } catch (e) {
       _allQuestions = await _questionService.getAllQuestions();
     }
   }
@@ -75,25 +73,12 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
 
     if (result != null) {
       try {
-        final currentUser = await _authService.getCurrentUserModel();
-        final template = AssessmentTemplate(
+        final template = TemplateService.instance.createBlank('MHCA').copyWith(
           name: result['name'] as String,
           description: result['description'] as String?,
-          createdBy: currentUser?.id,
         );
-
-        if (SupabaseService.isAvailable) {
-          final templateId = await _supabaseService.createTemplate(template);
-          if (mounted) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) =>
-                    _EditTemplateScreen(templateId: templateId),
-              ),
-            ).then((_) => _loadTemplates());
-          }
-        }
+        await TemplateService.instance.saveTemplate(template);
+        _loadTemplates();
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -184,11 +169,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
             ),
             child: ListTile(
               contentPadding: const EdgeInsets.all(16),
-              leading: CircleAvatar(
-                backgroundColor: template.isActive
-                    ? AppTheme.primaryBlue
-                    : Colors.grey,
-                child: const Icon(Icons.assignment, color: Colors.white),
+              leading: const CircleAvatar(
+                backgroundColor: AppTheme.primaryBlue,
+                child: Icon(Icons.assignment, color: Colors.white),
               ),
               title: Text(
                 template.name,
@@ -201,38 +184,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.edit, color: AppTheme.primaryBlue),
-                    onPressed: () async {
-                      if (template.id != null) {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                _EditTemplateScreen(templateId: template.id!),
-                          ),
-                        );
-                        _loadTemplates();
-                      }
-                    },
-                  ),
-                  IconButton(
                     icon: const Icon(Icons.delete, color: AppTheme.errorRed),
-                    onPressed: () => _deleteTemplate(template.id!),
+                    onPressed: () => _deleteTemplate(template.id),
                   ),
                 ],
               ),
-              onTap: () async {
-                if (template.id != null) {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          _EditTemplateScreen(templateId: template.id!),
-                    ),
-                  );
-                  _loadTemplates();
-                }
-              },
             ),
           );
         },
@@ -369,17 +325,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
       child: Column(
         children: [
           _buildStatCard(
-            'Total Assessments',
+            'Total Templates',
             _templates.length.toString(),
             Icons.assignment,
             AppTheme.primaryBlue,
-          ),
-          const SizedBox(height: 12),
-          _buildStatCard(
-            'Active Assessments',
-            _templates.where((t) => t.isActive).length.toString(),
-            Icons.check_circle,
-            AppTheme.accentGreen,
           ),
           const SizedBox(height: 12),
           _buildStatCard(
@@ -458,13 +407,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
     }
   }
 
-  Future<void> _deleteTemplate(int templateId) async {
+  Future<void> _deleteTemplate(String templateId) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Assessment'),
+        title: const Text('Delete Template'),
         content: const Text(
-          'Are you sure you want to delete this assessment template?',
+          'Are you sure you want to delete this template?',
         ),
         actions: [
           TextButton(
@@ -482,12 +431,12 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
 
     if (confirm == true) {
       try {
-        await _supabaseService.deleteTemplate(templateId);
+        await TemplateService.instance.deleteTemplate(templateId);
         _loadTemplates();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Assessment deleted successfully'),
+              content: Text('Template deleted successfully'),
               backgroundColor: AppTheme.accentGreen,
             ),
           );
@@ -496,7 +445,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error deleting assessment: $e'),
+              content: Text('Error deleting template: $e'),
               backgroundColor: AppTheme.errorRed,
             ),
           );
@@ -513,9 +462,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
 
     if (result != null) {
       try {
-        if (SupabaseService.isAvailable) {
-          await _supabaseService.addQuestion(result);
-        } else {
+        try {
+          await _apiService.addQuestion(result);
+        } catch (e) {
           await _questionService.addQuestion(result);
         }
         _loadAllQuestions();
@@ -548,9 +497,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
 
     if (result != null) {
       try {
-        if (SupabaseService.isAvailable) {
-          await _supabaseService.updateQuestion(result);
-        } else {
+        try {
+          await _apiService.updateQuestion(result);
+        } catch (e) {
           await _questionService.updateQuestion(result);
         }
         _loadAllQuestions();
@@ -597,9 +546,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
 
     if (confirm == true) {
       try {
-        if (SupabaseService.isAvailable) {
-          await _supabaseService.deleteQuestion(questionId);
-        } else {
+        try {
+          await _apiService.deleteQuestion(questionId);
+        } catch (e) {
           await _questionService.deleteQuestion(questionId);
         }
         _loadAllQuestions();
@@ -713,10 +662,10 @@ class _EditTemplateScreen extends StatefulWidget {
 }
 
 class _EditTemplateScreenState extends State<_EditTemplateScreen> {
-  final SupabaseService _supabaseService = SupabaseService();
+  final ApiService _apiService = ApiService();
   final QuestionService _questionService = QuestionService();
 
-  AssessmentTemplate? _template;
+  Map<String, dynamic>? _templateData;
   List<Question> _templateQuestions = [];
   List<Question> _availableQuestions = [];
   bool _isLoading = true;
@@ -730,17 +679,19 @@ class _EditTemplateScreenState extends State<_EditTemplateScreen> {
   Future<void> _loadTemplateData() async {
     setState(() => _isLoading = true);
     try {
-      _template = await _supabaseService.getTemplateWithQuestions(
+      _templateData = await _apiService.getTemplateWithQuestions(
         widget.templateId,
       );
-      if (_template != null) {
-        _templateQuestions = _template!.questions ?? [];
+      if (_templateData != null) {
+        _templateQuestions =
+            (_templateData!['questions'] as List<Question>?) ?? [];
       }
 
       // Load all available questions
-      if (SupabaseService.isAvailable) {
-        _availableQuestions = await _supabaseService.getAllQuestions();
-      } else {
+      try {
+        _availableQuestions = await _apiService.getAllQuestions();
+        if (_availableQuestions.isEmpty) _availableQuestions = await _questionService.getAllQuestions();
+      } catch (e) {
         _availableQuestions = await _questionService.getAllQuestions();
       }
 
@@ -759,7 +710,7 @@ class _EditTemplateScreenState extends State<_EditTemplateScreen> {
   Future<void> _addQuestionToTemplate(int questionId) async {
     try {
       final orderIndex = _templateQuestions.length;
-      await _supabaseService.addQuestionToTemplate(
+      await _apiService.addQuestionToTemplate(
         widget.templateId,
         questionId,
         orderIndex,
@@ -787,7 +738,7 @@ class _EditTemplateScreenState extends State<_EditTemplateScreen> {
 
   Future<void> _removeQuestionFromTemplate(int questionId) async {
     try {
-      await _supabaseService.removeQuestionFromTemplate(
+      await _apiService.removeQuestionFromTemplate(
         widget.templateId,
         questionId,
       );
@@ -816,12 +767,16 @@ class _EditTemplateScreenState extends State<_EditTemplateScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        appBar: AppBar(title: Text(_template?.name ?? 'Edit Assessment')),
+        appBar: AppBar(
+          title: Text(
+            (_templateData?['name'] as String?) ?? 'Edit Assessment',
+          ),
+        ),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
-    if (_template == null) {
+    if (_templateData == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Edit Assessment')),
         body: const Center(child: Text('Assessment not found')),
@@ -830,7 +785,7 @@ class _EditTemplateScreenState extends State<_EditTemplateScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_template!.name),
+        title: Text((_templateData!['name'] as String?) ?? 'Edit Assessment'),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
@@ -848,16 +803,16 @@ class _EditTemplateScreenState extends State<_EditTemplateScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _template!.name,
+                  (_templateData!['name'] as String?) ?? '',
                   style: GoogleFonts.poppins(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                if (_template!.description != null) ...[
+                if (_templateData!['description'] != null) ...[
                   const SizedBox(height: 8),
                   Text(
-                    _template!.description!,
+                    _templateData!['description'] as String,
                     style: GoogleFonts.inter(color: Colors.grey[700]),
                   ),
                 ],
