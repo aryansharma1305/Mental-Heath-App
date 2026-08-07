@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/assessment.dart';
+import '../models/assessment_recommendations.dart';
 import '../models/assessment_template.dart';
 import '../models/risk_level.dart';
 import '../services/countersignature_service.dart';
@@ -14,6 +15,7 @@ import '../services/reminder_service.dart';
 import '../services/template_service.dart';
 import '../theme/app_theme.dart';
 import 'countersignature_screen.dart';
+import 'recommendations_step_screen.dart';
 
 class MHCAAssessmentScreen extends StatefulWidget {
   /// Optional template to pre-fill non-clinical context fields.
@@ -106,7 +108,6 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
     _pageController.dispose();
     super.dispose();
   }
-
 
   void _goToStep(int step) {
     setState(() => _currentStep = step);
@@ -273,6 +274,12 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
         _responses,
       );
       final summary = MHCAAssessmentQuestions.generateSummary(_responses);
+      final structuredRecommendations = await _collectRecommendations(
+        determination,
+      );
+      if (structuredRecommendations == null) {
+        return;
+      }
 
       final assessmentData = {
         'patient_name': _nameController.text.trim(),
@@ -309,8 +316,10 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
         responses: Map<String, dynamic>.from(_responses)
           ..addAll({'explanations': _explanations}),
         overallCapacity: determination,
-        recommendations:
-            'Purpose: $_purpose | Advance Directive: $_advanceDirective',
+        recommendations: structuredRecommendations.toLegacySummary().isNotEmpty
+            ? structuredRecommendations.toLegacySummary()
+            : 'Purpose: $_purpose | Advance Directive: $_advanceDirective',
+        structuredRecommendations: structuredRecommendations,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
         status: 'completed',
@@ -326,7 +335,9 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
       if (_appliedTemplateId != null) {
         TemplateService.instance
             .recordUsage(_appliedTemplateId!)
-            .catchError((e) => debugPrint('⚠️ Template recordUsage failed: $e'));
+            .catchError(
+              (e) => debugPrint('⚠️ Template recordUsage failed: $e'),
+            );
       }
 
       // Schedule follow-up reminder based on risk level.
@@ -336,9 +347,7 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
             assessment: assessment,
             patientName: _nameController.text.trim(),
           )
-          .catchError(
-            (e) => debugPrint('⚠️ Reminder scheduling failed: $e'),
-          );
+          .catchError((e) => debugPrint('⚠️ Reminder scheduling failed: $e'));
 
       // Also save to SharedPreferences as backup
       final prefs = await SharedPreferences.getInstance();
@@ -356,6 +365,30 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  Future<AssessmentRecommendations?> _collectRecommendations(
+    String determination,
+  ) {
+    final lacksCapacity = determination.toLowerCase().contains('lacks');
+    final defaults = AssessmentRecommendations(
+      followUpRecommended: lacksCapacity,
+      referToSpecialist: lacksCapacity,
+      noFurtherAction: !lacksCapacity,
+      freeText: 'Purpose: $_purpose | Advance Directive: $_advanceDirective',
+    );
+
+    return Navigator.push<AssessmentRecommendations>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RecommendationsStepScreen(
+          title: 'MHCA recommendations',
+          subtitle:
+              'Confirm actions after capacity determination: $determination.',
+          initialRecommendations: defaults,
+        ),
+      ),
+    );
   }
 
   void _showResultsDialog(String determination, Assessment savedAssessment) {
@@ -493,8 +526,7 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) =>
-                  CountersignatureScreen(assessment: assessment),
+              builder: (_) => CountersignatureScreen(assessment: assessment),
             ),
           );
         },
@@ -556,11 +588,7 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.info_outline,
-                    size: 16,
-                    color: AppTheme.infoBlue,
-                  ),
+                  Icon(Icons.info_outline, size: 16, color: AppTheme.infoBlue),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -642,7 +670,6 @@ class _MHCAAssessmentScreenState extends State<MHCAAssessmentScreen> {
       ),
     );
   }
-
 
   Widget _buildResultRow(String label, String value) {
     return Padding(

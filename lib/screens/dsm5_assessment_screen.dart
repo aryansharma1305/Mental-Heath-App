@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import '../models/assessment_recommendations.dart';
 import '../models/consent_basis.dart';
 import '../models/consent_record.dart';
 import '../models/question.dart';
@@ -16,6 +17,7 @@ import '../theme/app_theme.dart';
 import 'consent_gate_screen.dart';
 import 'countersignature_screen.dart';
 import 'dsm5_level2_assessment_screen.dart';
+import 'recommendations_step_screen.dart';
 
 class DSM5AssessmentScreen extends StatefulWidget {
   const DSM5AssessmentScreen({super.key});
@@ -188,6 +190,13 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
       final severity = AssessmentQuestions.getSeverityInterpretation(
         totalScore,
       );
+      final recommendations = await _collectRecommendations(
+        totalScore: totalScore,
+        flaggedDomains: flaggedDomains,
+      );
+      if (recommendations == null) {
+        return;
+      }
 
       // Get current user
       final currentUser = await _authService.getCurrentUserModel();
@@ -206,6 +215,7 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
         'domain_scores': domainScores,
         'severity': severity,
         'flagged_domains': flaggedDomains,
+        'structured_recommendations': recommendations,
         'created_at': DateTime.now().toIso8601String(),
       };
 
@@ -247,7 +257,15 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
         responses: data['responses'] as Map<String, dynamic>,
         overallCapacity:
             data['severity'], // Mapping Severity to Overall Capacity
-        recommendations: (data['flagged_domains'] as List).join(', '),
+        recommendations:
+            (data['structured_recommendations'] as AssessmentRecommendations)
+                .toLegacySummary()
+                .isNotEmpty
+            ? (data['structured_recommendations'] as AssessmentRecommendations)
+                  .toLegacySummary()
+            : (data['flagged_domains'] as List).join(', '),
+        structuredRecommendations:
+            data['structured_recommendations'] as AssessmentRecommendations,
         createdAt: DateTime.parse(data['created_at']),
         updatedAt: DateTime.now(),
         status: 'completed',
@@ -273,6 +291,32 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
       debugPrint('Error saving to database: $e');
       rethrow; // Re-throw to be caught by caller
     }
+  }
+
+  Future<AssessmentRecommendations?> _collectRecommendations({
+    required int totalScore,
+    required List<String> flaggedDomains,
+  }) async {
+    final defaults = AssessmentRecommendations(
+      followUpRecommended: flaggedDomains.isNotEmpty || totalScore >= 16,
+      referToSpecialist: flaggedDomains.length >= 3 || totalScore >= 32,
+      noFurtherAction: flaggedDomains.isEmpty && totalScore < 16,
+      freeText: flaggedDomains.isEmpty
+          ? null
+          : 'Triggered domains: ${flaggedDomains.join(', ')}',
+    );
+
+    return Navigator.push<AssessmentRecommendations>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RecommendationsStepScreen(
+          title: 'DSM-5 recommendations',
+          subtitle:
+              'Confirm actions based on score $totalScore and ${flaggedDomains.length} triggered domain(s).',
+          initialRecommendations: defaults,
+        ),
+      ),
+    );
   }
 
   void _showResultsDialog(
@@ -416,7 +460,8 @@ class _DSM5AssessmentScreenState extends State<DSM5AssessmentScreen>
             onPressed: () {
               Navigator.pop(context);
               final saved = _lastSavedAssessment;
-              if (saved != null && saved.riskLevel.countersignatureRecommended) {
+              if (saved != null &&
+                  saved.riskLevel.countersignatureRecommended) {
                 _showCountersignaturePrompt(saved);
               } else {
                 Navigator.pop(context, true);

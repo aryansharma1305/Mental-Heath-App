@@ -5,7 +5,9 @@ import '../services/dsm5_level2_questions.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
 import '../models/assessment.dart';
+import '../models/assessment_recommendations.dart';
 import '../theme/app_theme.dart';
+import 'recommendations_step_screen.dart';
 
 /// DSM-5-TR Level 2 Cross-Cutting Symptom Assessment Screen (Adults)
 ///
@@ -174,6 +176,16 @@ class _DSM5Level2AssessmentScreenState extends State<DSM5Level2AssessmentScreen>
       for (final r in _completedResults) {
         responseMap[r.domainKey] = r.toMap();
       }
+      final actionDomains = _completedResults
+          .where((r) => r.requiresAction)
+          .map((r) => r.domainTitle)
+          .toList();
+      final structuredRecommendations = await _collectRecommendations(
+        actionDomains,
+      );
+      if (structuredRecommendations == null) {
+        return;
+      }
 
       final assessment = Assessment(
         patientId: widget.patientId,
@@ -185,10 +197,10 @@ class _DSM5Level2AssessmentScreenState extends State<DSM5Level2AssessmentScreen>
         decisionContext: 'DSM-5 Level 2 Assessment',
         responses: responseMap,
         overallCapacity: resultSummary,
-        recommendations: _completedResults
-            .where((r) => r.requiresAction)
-            .map((r) => r.domainTitle)
-            .join(', '),
+        recommendations: structuredRecommendations.toLegacySummary().isNotEmpty
+            ? structuredRecommendations.toLegacySummary()
+            : actionDomains.join(', '),
+        structuredRecommendations: structuredRecommendations,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
         status: 'completed',
@@ -207,6 +219,31 @@ class _DSM5Level2AssessmentScreenState extends State<DSM5Level2AssessmentScreen>
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  Future<AssessmentRecommendations?> _collectRecommendations(
+    List<String> actionDomains,
+  ) {
+    final defaults = AssessmentRecommendations(
+      followUpRecommended: actionDomains.isNotEmpty,
+      referToSpecialist: actionDomains.length >= 2,
+      noFurtherAction: actionDomains.isEmpty,
+      freeText: actionDomains.isEmpty
+          ? null
+          : 'Level 2 domains requiring action: ${actionDomains.join(', ')}',
+    );
+
+    return Navigator.push<AssessmentRecommendations>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RecommendationsStepScreen(
+          title: 'Level 2 recommendations',
+          subtitle:
+              'Confirm actions from ${_completedResults.length} completed Level 2 domain(s).',
+          initialRecommendations: defaults,
+        ),
+      ),
+    );
   }
 
   // ──────────────────────────────────────────────
