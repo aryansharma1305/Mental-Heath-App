@@ -443,7 +443,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         mainAxisSpacing: 16,
         childAspectRatio: 1.0,
       ),
-      itemCount: actions.length > 6 ? 6 : actions.length,
+      itemCount: actions.length,
       itemBuilder: (context, index) {
         final action = actions[index];
         final gradients = [
