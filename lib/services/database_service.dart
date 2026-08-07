@@ -23,6 +23,7 @@ class DatabaseService {
   /// Inject an alternate DatabaseFactory for unit/integration tests.
   /// Call before the first access to `database`.
   static DatabaseFactory? _testFactory;
+  static String? _testDatabasePath;
 
   // ignore: use_setters_to_change_properties
   static void overrideFactoryForTesting(DatabaseFactory factory) {
@@ -30,10 +31,16 @@ class DatabaseService {
     _database = null; // ensure re-init with new factory
   }
 
+  static void overrideDatabasePathForTesting(String path) {
+    _testDatabasePath = path;
+    _database = null;
+  }
+
   /// Reset the singleton so each test starts clean.
   static void resetForTesting() {
     _database = null;
     _testFactory = null;
+    _testDatabasePath = null;
   }
 
   Future<Database> get database async {
@@ -46,7 +53,7 @@ class DatabaseService {
     // Test mode: use the injected factory (sqflite_common_ffi, no encryption).
     if (_testFactory != null) {
       return await _testFactory!.openDatabase(
-        inMemoryDatabasePath,
+        _testDatabasePath ?? inMemoryDatabasePath,
         options: OpenDatabaseOptions(
           version: _databaseVersion,
           onCreate: _onCreate,
