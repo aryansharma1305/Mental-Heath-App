@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/assessment.dart';
+import '../models/audit_log_entry.dart';
 import '../models/clinical_note.dart';
 import '../models/consent_basis.dart';
 import '../models/consent_record.dart';
@@ -17,7 +18,7 @@ import 'api_service.dart';
 class DatabaseService {
   static Database? _database;
   static const String _databaseName = 'mental_capacity_assessments.db';
-  static const int _databaseVersion = 10;
+  static const int _databaseVersion = 11;
 
   /// Inject an alternate DatabaseFactory for unit/integration tests.
   /// Call before the first access to `database`.
@@ -40,7 +41,6 @@ class DatabaseService {
     _database = await _initDatabase();
     return _database!;
   }
-
 
   Future<Database> _initDatabase() async {
     // Test mode: use the injected factory (sqflite_common_ffi, no encryption).
@@ -66,7 +66,6 @@ class DatabaseService {
       onUpgrade: _onUpgrade,
     );
   }
-
 
   Future<void> _onCreate(Database db, int version) async {
     // Assessments table
@@ -132,6 +131,8 @@ class DatabaseService {
         FOREIGN KEY (assessment_id) REFERENCES assessments(id) ON DELETE SET NULL
       )
     ''');
+
+    await _ensureAuditLogTable(db);
 
     // Users table with roles
     await db.execute('''
@@ -297,6 +298,10 @@ class DatabaseService {
     if (oldVersion < 10) {
       await _ensureCountersignatureSchemaV10(db);
     }
+
+    if (oldVersion < 11) {
+      await _ensureAuditLogTable(db);
+    }
   }
 
   Future<void> _ensureRiskLevelColumn(Database db) async {
@@ -389,6 +394,21 @@ class DatabaseService {
     ''');
   }
 
+  Future<void> _ensureAuditLogTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS audit_logs(
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        action        TEXT NOT NULL,
+        entity_type   TEXT NOT NULL,
+        entity_id     TEXT NOT NULL,
+        patient_id    TEXT,
+        actor_name    TEXT,
+        actor_user_id TEXT,
+        created_at    TEXT NOT NULL,
+        metadata      TEXT
+      )
+    ''');
+  }
 
   Future<void> _createPatientTables(Database db) async {
     await db.execute('''
@@ -480,6 +500,25 @@ class DatabaseService {
 
       // 1. Insert locally first (offline-first)
       final id = await db.insert('assessments', assessmentWithRisk.toMap());
+      await _insertAuditLog(
+        db,
+        AuditLogEntry(
+          action: assessmentWithRisk.isRefused
+              ? 'refusal_record_created'
+              : 'assessment_created',
+          entityType: 'assessment',
+          entityId: id.toString(),
+          patientId: assessmentWithRisk.patientId,
+          actorName: assessmentWithRisk.assessorName,
+          actorUserId: assessmentWithRisk.assessorUserId,
+          createdAt: DateTime.now(),
+          metadata: {
+            'decision_context': assessmentWithRisk.decisionContext,
+            'risk_level': assessmentWithRisk.riskLevel.name,
+            'assessment_status': assessmentWithRisk.assessmentStatus,
+          },
+        ),
+      );
       await _refreshPatientAssessmentStats(
         db,
         assessmentWithRisk.patientId,
@@ -771,6 +810,41 @@ class DatabaseService {
       }
     }
     return riskByPatient;
+  }
+
+  Future<int> insertAuditLog(AuditLogEntry entry) async {
+    final db = await database;
+    return _insertAuditLog(db, entry);
+  }
+
+  Future<int> _insertAuditLog(Database db, AuditLogEntry entry) async {
+    try {
+      return await db.insert('audit_logs', entry.toMap());
+    } catch (e) {
+      debugPrint('Audit log insert failed: $e');
+      return 0;
+    }
+  }
+
+  Future<List<AuditLogEntry>> getAuditLogsForPatient(String patientId) async {
+    final db = await database;
+    final maps = await db.query(
+      'audit_logs',
+      where: 'patient_id = ?',
+      whereArgs: [patientId],
+      orderBy: 'created_at DESC',
+    );
+    return maps.map(AuditLogEntry.fromMap).toList();
+  }
+
+  Future<List<AuditLogEntry>> getRecentAuditLogs({int limit = 100}) async {
+    final db = await database;
+    final maps = await db.query(
+      'audit_logs',
+      orderBy: 'created_at DESC',
+      limit: limit,
+    );
+    return maps.map(AuditLogEntry.fromMap).toList();
   }
 
   Future<List<ClinicalNote>> getClinicalNotesForPatient(
