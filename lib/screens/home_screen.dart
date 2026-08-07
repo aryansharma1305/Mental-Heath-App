@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:mental_capacity_assessment/l10n/app_localizations.dart';
 import '../models/assessment.dart';
+import '../models/risk_level.dart';
 import '../models/user_role.dart';
 import '../services/countersignature_service.dart';
 import '../services/database_service.dart';
@@ -41,6 +42,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   UserRole _userRole = UserRole.patient;
   List<Assessment> _recentAssessments = [];
   List<Assessment> _pendingSignoffs = [];
+  int _totalAssessments = 0;
+  int _criticalRiskCount = 0;
+  int _highRiskCount = 0;
+  int _moderateRiskCount = 0;
+  int _lowRiskCount = 0;
   ReviewQueueSummary _reviewSummary = const ReviewQueueSummary(
     total: 0,
     overdue: 0,
@@ -97,6 +103,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       setState(() {
         _recentAssessments = assessments.take(10).toList();
         _pendingSignoffs = pending;
+        _totalAssessments = assessments.length;
+        _criticalRiskCount = assessments
+            .where((a) => a.riskLevel == RiskLevel.critical)
+            .length;
+        _highRiskCount = assessments
+            .where((a) => a.riskLevel == RiskLevel.high)
+            .length;
+        _moderateRiskCount = assessments
+            .where((a) => a.riskLevel == RiskLevel.moderate)
+            .length;
+        _lowRiskCount = assessments
+            .where((a) => a.riskLevel == RiskLevel.low)
+            .length;
         _reviewSummary = reviewSummary;
         _isLoading = false;
       });
@@ -340,6 +359,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
           _buildReviewSummaryCard(),
 
+          const SizedBox(height: 16),
+
+          _buildClinicalOverviewCard(),
+
           const SizedBox(height: 32),
 
           // Quick Actions Header
@@ -518,6 +541,103 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ),
       ),
     ).animate().fadeIn(delay: 350.ms).slideY(begin: 0.15, end: 0);
+  }
+
+  Widget _buildClinicalOverviewCard() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: AppTheme.softShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.dashboard_customize_outlined,
+                  color: AppTheme.primaryColor,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Clinical dashboard',
+                  style: GoogleFonts.poppins(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.textDark,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _DashboardMetric(
+                  label: 'Total',
+                  value: '$_totalAssessments',
+                  color: AppTheme.primaryBlue,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _DashboardMetric(
+                  label: 'Overdue',
+                  value: '${_reviewSummary.overdue}',
+                  color: AppTheme.errorRed,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _DashboardMetric(
+                  label: 'Sign-off',
+                  value: '${_pendingSignoffs.length}',
+                  color: AppTheme.warningOrange,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _RiskPill(
+                label: 'Critical',
+                count: _criticalRiskCount,
+                color: const Color(0xFF4A148C),
+              ),
+              _RiskPill(
+                label: 'High',
+                count: _highRiskCount,
+                color: const Color(0xFFB71C1C),
+              ),
+              _RiskPill(
+                label: 'Moderate',
+                count: _moderateRiskCount,
+                color: const Color(0xFFF57F17),
+              ),
+              _RiskPill(
+                label: 'Low',
+                count: _lowRiskCount,
+                color: const Color(0xFF2E7D32),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ).animate().fadeIn(delay: 420.ms).slideY(begin: 0.15, end: 0);
   }
 
   List<Map<String, dynamic>> _getRoleBasedActions() {
@@ -1307,6 +1427,84 @@ class _NavBarItem extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DashboardMetric extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _DashboardMetric({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: color.withValues(alpha: 0.14)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            value,
+            style: GoogleFonts.poppins(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textMedium,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RiskPill extends StatelessWidget {
+  final String label;
+  final int count;
+  final Color color;
+
+  const _RiskPill({
+    required this.label,
+    required this.count,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
+      ),
+      child: Text(
+        '$label $count',
+        style: GoogleFonts.inter(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: color,
         ),
       ),
     );
