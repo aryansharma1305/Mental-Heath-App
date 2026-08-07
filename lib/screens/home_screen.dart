@@ -8,6 +8,7 @@ import '../models/user_role.dart';
 import '../services/countersignature_service.dart';
 import '../services/database_service.dart';
 import '../services/auth_service.dart';
+import '../services/review_queue_service.dart';
 import '../theme/app_theme.dart';
 import 'assessment_list_screen.dart';
 import 'assessment_detail_screen.dart';
@@ -22,6 +23,7 @@ import 'dsm5_responses_screen.dart';
 import 'mhca_assessment_screen.dart';
 import 'mhca_responses_screen.dart';
 import 'patient_profiles_screen.dart';
+import 'review_queue_screen.dart';
 import '../widgets/empty_state_widget.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -39,6 +41,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   UserRole _userRole = UserRole.patient;
   List<Assessment> _recentAssessments = [];
   List<Assessment> _pendingSignoffs = [];
+  ReviewQueueSummary _reviewSummary = const ReviewQueueSummary(
+    total: 0,
+    overdue: 0,
+    critical: 0,
+    high: 0,
+    refusals: 0,
+  );
   bool _isLoading = true;
   late AnimationController _animationController;
   late AnimationController _floatingController;
@@ -84,9 +93,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     try {
       final assessments = await _databaseService.getAllAssessments();
       final pending = await CountersignatureService.instance.pendingSignOffs();
+      final reviewSummary = ReviewQueueService().summary(assessments);
       setState(() {
         _recentAssessments = assessments.take(10).toList();
         _pendingSignoffs = pending;
+        _reviewSummary = reviewSummary;
         _isLoading = false;
       });
     } catch (e) {
@@ -327,6 +338,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
           const SizedBox(height: 32),
 
+          _buildReviewSummaryCard(),
+
+          const SizedBox(height: 32),
+
           // Quick Actions Header
           Text(
             'Quick Actions',
@@ -380,8 +395,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           const SizedBox(height: 16),
 
           // Pending countersignatures section
-          if (_pendingSignoffs.isNotEmpty)
-            _buildPendingSignoffSection(),
+          if (_pendingSignoffs.isNotEmpty) _buildPendingSignoffSection(),
 
           const SizedBox(height: 16),
 
@@ -426,6 +440,84 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         );
       },
     );
+  }
+
+  Widget _buildReviewSummaryCard() {
+    final hasItems = _reviewSummary.total > 0;
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ReviewQueueScreen()),
+        );
+        _loadDashboardData();
+      },
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: hasItems ? const Color(0xFF2A170F) : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: AppTheme.softShadow,
+          border: Border.all(
+            color: hasItems
+                ? AppTheme.errorRed.withValues(alpha: 0.22)
+                : Colors.transparent,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: hasItems
+                    ? Colors.white.withValues(alpha: 0.12)
+                    : AppTheme.primaryColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(
+                hasItems
+                    ? Icons.assignment_late_outlined
+                    : Icons.check_circle_outline,
+                color: hasItems ? Colors.white : AppTheme.primaryColor,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    hasItems
+                        ? '${_reviewSummary.total} patients need review'
+                        : 'Review queue clear',
+                    style: GoogleFonts.poppins(
+                      color: hasItems ? Colors.white : AppTheme.textDark,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    hasItems
+                        ? '${_reviewSummary.overdue} overdue - ${_reviewSummary.critical} critical - ${_reviewSummary.high} high'
+                        : 'No overdue or high-risk follow-ups pending.',
+                    style: GoogleFonts.inter(
+                      color: hasItems
+                          ? Colors.white.withValues(alpha: 0.76)
+                          : AppTheme.textMedium,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              color: hasItems ? Colors.white : AppTheme.textGrey,
+            ),
+          ],
+        ),
+      ),
+    ).animate().fadeIn(delay: 350.ms).slideY(begin: 0.15, end: 0);
   }
 
   List<Map<String, dynamic>> _getRoleBasedActions() {
@@ -563,6 +655,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           },
         },
         {
+          'icon': Icons.assignment_late_outlined,
+          'title': 'Review Queue',
+          'subtitle': 'Risk follow-ups',
+          'onTap': () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ReviewQueueScreen()),
+            );
+            _loadDashboardData();
+          },
+        },
+        {
           'icon': Icons.folder_shared_outlined,
           'title': AppLocalizations.of(context)!.patientProfiles,
           'subtitle': AppLocalizations.of(context)!.patientProfilesDesc,
@@ -650,6 +754,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           },
         },
         {
+          'icon': Icons.assignment_late_outlined,
+          'title': 'Review Queue',
+          'subtitle': 'Risk follow-ups',
+          'onTap': () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ReviewQueueScreen()),
+            );
+            _loadDashboardData();
+          },
+        },
+        {
           'icon': Icons.rate_review_outlined,
           'title': 'Review',
           'subtitle': 'Check assessments',
@@ -717,8 +833,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
               const SizedBox(width: 8),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: Colors.orange.shade100,
                   borderRadius: BorderRadius.circular(12),
@@ -760,7 +875,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                          color: Colors.orange.shade200, width: 1.5),
+                        color: Colors.orange.shade200,
+                        width: 1.5,
+                      ),
                       boxShadow: AppTheme.softShadow,
                     ),
                     child: Column(
@@ -769,8 +886,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.pending_actions_rounded,
-                                size: 16, color: Colors.orange.shade600),
+                            Icon(
+                              Icons.pending_actions_rounded,
+                              size: 16,
+                              color: Colors.orange.shade600,
+                            ),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
@@ -836,9 +956,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           actionLabel: AppLocalizations.of(context)!.newAssessment,
           onAction: () => Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (_) => const DSM5AssessmentScreen(),
-            ),
+            MaterialPageRoute(builder: (_) => const DSM5AssessmentScreen()),
           ),
         ),
       );

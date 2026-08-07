@@ -63,10 +63,7 @@ void main() {
     });
 
     test('low → 90 days', () {
-      expect(
-        ReminderInterval.forRisk(RiskLevel.low),
-        const Duration(days: 90),
-      );
+      expect(ReminderInterval.forRisk(RiskLevel.low), const Duration(days: 90));
     });
   });
 
@@ -118,11 +115,20 @@ void main() {
 
     test('not overdue when followUpRecommended is false and not refused', () {
       final a = _makeAssessment(
-        risk: RiskLevel.critical,
+        risk: RiskLevel.low,
         followUpRecommended: false,
         createdAt: DateTime.now().subtract(const Duration(days: 100)),
       );
       expect(service.overdueFor(a), isFalse);
+    });
+
+    test('high risk is overdue even without explicit follow-up checkbox', () {
+      final a = _makeAssessment(
+        risk: RiskLevel.high,
+        followUpRecommended: false,
+        createdAt: DateTime.now().subtract(const Duration(days: 20)),
+      );
+      expect(service.overdueFor(a), isTrue);
     });
 
     test('refused assessment counts as needing follow-up', () {
@@ -172,8 +178,6 @@ void main() {
 
   // ── notificationId stability ──────────────────────────────────────────────
   group('Notification ID stability', () {
-    final service = ReminderService.instance;
-
     test('same patientId always produces same notification ID', () {
       const id = 'patient-abc-123';
       final a1 = _makeAssessment(

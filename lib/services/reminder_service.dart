@@ -12,18 +12,18 @@ import '../models/risk_level.dart';
 // ---------------------------------------------------------------------------
 class ReminderInterval {
   static Duration forRisk(RiskLevel level) => switch (level) {
-        RiskLevel.critical => const Duration(days: 7),
-        RiskLevel.high => const Duration(days: 14),
-        RiskLevel.moderate => const Duration(days: 30),
-        RiskLevel.low => const Duration(days: 90),
-      };
+    RiskLevel.critical => const Duration(days: 7),
+    RiskLevel.high => const Duration(days: 14),
+    RiskLevel.moderate => const Duration(days: 30),
+    RiskLevel.low => const Duration(days: 90),
+  };
 
   static String labelForRisk(RiskLevel level) => switch (level) {
-        RiskLevel.critical => '7 days',
-        RiskLevel.high => '14 days',
-        RiskLevel.moderate => '30 days',
-        RiskLevel.low => '90 days',
-      };
+    RiskLevel.critical => '7 days',
+    RiskLevel.high => '14 days',
+    RiskLevel.moderate => '30 days',
+    RiskLevel.low => '90 days',
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -46,8 +46,9 @@ class ReminderService {
     if (_initialised) return;
     tz.initializeTimeZones();
 
-    const androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     const darwinSettings = DarwinInitializationSettings(
       // Do NOT request permission here — ask at the right clinical moment.
       requestAlertPermission: false,
@@ -79,16 +80,16 @@ class ReminderService {
   }) async {
     if (!await _isEnabled()) return;
 
-    final needsReminder = assessment.isRefused ||
-        assessment.structuredRecommendations.followUpRecommended;
-    if (!needsReminder) return;
+    if (!needsFollowUp(assessment)) return;
 
     // Request iOS permission at the first clinical moment.
     if (Platform.isIOS) {
       final granted = await _requestIosPermission();
       if (!granted) {
-        debugPrint('⚠️ ReminderService: iOS permission denied — '
-            'in-app overdue banners only.');
+        debugPrint(
+          '⚠️ ReminderService: iOS permission denied — '
+          'in-app overdue banners only.',
+        );
         return;
       }
     }
@@ -138,8 +139,10 @@ class ReminderService {
       payload: _buildPayload(assessment),
     );
 
-    debugPrint('📅 Reminder scheduled: patient=${assessment.patientId} '
-        'due=${due.toIso8601String()} risk=${assessment.riskLevel.name}');
+    debugPrint(
+      '📅 Reminder scheduled: patient=${assessment.patientId} '
+      'due=${due.toIso8601String()} risk=${assessment.riskLevel.name}',
+    );
   }
 
   // -------------------------------------------------------------------------
@@ -158,11 +161,15 @@ class ReminderService {
   DateTime dueDate(Assessment assessment) =>
       assessment.createdAt.add(ReminderInterval.forRisk(assessment.riskLevel));
 
+  bool needsFollowUp(Assessment assessment) {
+    if (assessment.isRefused) return true;
+    if (assessment.riskLevel.requiresCountersignature) return true;
+    return assessment.structuredRecommendations.followUpRecommended;
+  }
+
   /// True when now is past the due date and a follow-up was recommended.
   bool overdueFor(Assessment assessment) {
-    final needsReminder = assessment.isRefused ||
-        assessment.structuredRecommendations.followUpRecommended;
-    if (!needsReminder) return false;
+    if (!needsFollowUp(assessment)) return false;
     return DateTime.now().isAfter(dueDate(assessment));
   }
 
@@ -195,8 +202,10 @@ class ReminderService {
   }
 
   Future<bool> _requestIosPermission() async {
-    final ios = _plugin.resolvePlatformSpecificImplementation<
-        IOSFlutterLocalNotificationsPlugin>();
+    final ios = _plugin
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >();
     if (ios == null) return false;
     final granted = await ios.requestPermissions(
       alert: true,
@@ -212,11 +221,11 @@ class ReminderService {
       patientId.hashCode.abs() % 2147483647;
 
   String _titleForRisk(RiskLevel level) => switch (level) {
-        RiskLevel.critical => '🔴 Critical: Follow-Up Due',
-        RiskLevel.high => '🟠 High Risk: Follow-Up Due',
-        RiskLevel.moderate => '🟡 Follow-Up Assessment Due',
-        RiskLevel.low => '🟢 Follow-Up Reminder',
-      };
+    RiskLevel.critical => '🔴 Critical: Follow-Up Due',
+    RiskLevel.high => '🟠 High Risk: Follow-Up Due',
+    RiskLevel.moderate => '🟡 Follow-Up Assessment Due',
+    RiskLevel.low => '🟢 Follow-Up Reminder',
+  };
 
   String _buildPayload(Assessment a) =>
       'patientId=${a.patientId}&assessmentType=mhca&action=follow_up';

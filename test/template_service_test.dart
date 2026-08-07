@@ -1,7 +1,6 @@
 // ignore_for_file: avoid_print
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite_sqlcipher/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:mental_capacity_assessment/models/assessment.dart';
@@ -71,7 +70,6 @@ void main() {
     await db.delete('assessment_templates');
   });
 
-
   // ── getTemplates ──────────────────────────────────────────────────────
 
   group('getTemplates', () {
@@ -81,8 +79,12 @@ void main() {
     });
 
     test('returns only templates matching the assessment type', () async {
-      await service.saveTemplate(_makeTemplate(id: 't1', assessmentType: 'MHCA'));
-      await service.saveTemplate(_makeTemplate(id: 't2', assessmentType: 'DSM5'));
+      await service.saveTemplate(
+        _makeTemplate(id: 't1', assessmentType: 'MHCA'),
+      );
+      await service.saveTemplate(
+        _makeTemplate(id: 't2', assessmentType: 'DSM5'),
+      );
 
       final mhca = await service.getTemplates('MHCA');
       expect(mhca.length, 1);
@@ -105,9 +107,9 @@ void main() {
       );
 
       final result = await service.getTemplates('MHCA');
-      expect(result[0].name, 'Beta');   // highest useCount
-      expect(result[1].name, 'Alpha');  // useCount=1 > 0, alpha before gamma
-      expect(result[2].name, 'Gamma');  // lowest useCount
+      expect(result[0].name, 'Beta'); // highest useCount
+      expect(result[1].name, 'Alpha'); // useCount=1 > 0, alpha before gamma
+      expect(result[2].name, 'Gamma'); // lowest useCount
     });
   });
 
@@ -168,10 +170,7 @@ void main() {
 
     test('does not throw for missing id', () async {
       // recordUsage is fire-and-forget — should not throw.
-      await expectLater(
-        service.recordUsage('ghost-id'),
-        completes,
-      );
+      await expectLater(service.recordUsage('ghost-id'), completes);
     });
   });
 

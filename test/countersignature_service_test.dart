@@ -33,7 +33,7 @@ void main() {
   // Helpers
   // -------------------------------------------------------------------------
 
-  Future<Assessment> _insertHighRiskAssessment() async {
+  Future<Assessment> insertHighRiskAssessment() async {
     final db = DatabaseService();
     final a = Assessment(
       patientId: 'P001',
@@ -54,7 +54,7 @@ void main() {
     return a.copyWith(id: id);
   }
 
-  Future<Assessment> _insertLowRiskAssessment() async {
+  Future<Assessment> insertLowRiskAssessment() async {
     final db = DatabaseService();
     final a = Assessment(
       patientId: 'P002',
@@ -127,7 +127,10 @@ void main() {
       final restored = Countersignature.fromMap(map);
       expect(restored.id, equals(cs.id));
       expect(restored.signatoryName, equals('Dr Round'));
-      expect(restored.outcome, equals(CountersignatureOutcome.approvedWithComments));
+      expect(
+        restored.outcome,
+        equals(CountersignatureOutcome.approvedWithComments),
+      );
       expect(restored.notes, equals('Small concerns noted.'));
     });
 
@@ -146,14 +149,14 @@ void main() {
 
   group('CountersignatureService — status transitions', () {
     test('requestCountersignature sets status to pending', () async {
-      final a = await _insertHighRiskAssessment();
+      final a = await insertHighRiskAssessment();
       await CountersignatureService.instance.requestCountersignature(a.id!);
       final updated = await DatabaseService().getAssessment(a.id!);
       expect(updated?.countersignatureStatus, equals('pending'));
     });
 
     test('submit approved sets status to countersigned', () async {
-      final a = await _insertHighRiskAssessment();
+      final a = await insertHighRiskAssessment();
       await CountersignatureService.instance.requestCountersignature(a.id!);
       await CountersignatureService.instance.submitCountersignature(
         assessment: (await DatabaseService().getAssessment(a.id!))!,
@@ -165,36 +168,42 @@ void main() {
       expect(updated?.countersignatureStatus, equals('countersigned'));
     });
 
-    test('submit approvedWithComments also sets status to countersigned', () async {
-      final a = await _insertHighRiskAssessment();
-      await CountersignatureService.instance.requestCountersignature(a.id!);
-      await CountersignatureService.instance.submitCountersignature(
-        assessment: (await DatabaseService().getAssessment(a.id!))!,
-        signatoryName: 'Dr Comment',
-        signatoryRole: 'Registrar',
-        outcome: CountersignatureOutcome.approvedWithComments,
-        notes: 'Minor concern.',
-      );
-      final updated = await DatabaseService().getAssessment(a.id!);
-      expect(updated?.countersignatureStatus, equals('countersigned'));
-    });
+    test(
+      'submit approvedWithComments also sets status to countersigned',
+      () async {
+        final a = await insertHighRiskAssessment();
+        await CountersignatureService.instance.requestCountersignature(a.id!);
+        await CountersignatureService.instance.submitCountersignature(
+          assessment: (await DatabaseService().getAssessment(a.id!))!,
+          signatoryName: 'Dr Comment',
+          signatoryRole: 'Registrar',
+          outcome: CountersignatureOutcome.approvedWithComments,
+          notes: 'Minor concern.',
+        );
+        final updated = await DatabaseService().getAssessment(a.id!);
+        expect(updated?.countersignatureStatus, equals('countersigned'));
+      },
+    );
 
-    test('submit requestedAmendment sets status to amendment_requested', () async {
-      final a = await _insertHighRiskAssessment();
-      await CountersignatureService.instance.requestCountersignature(a.id!);
-      await CountersignatureService.instance.submitCountersignature(
-        assessment: (await DatabaseService().getAssessment(a.id!))!,
-        signatoryName: 'Dr Amend',
-        signatoryRole: 'Consultant',
-        outcome: CountersignatureOutcome.requestedAmendment,
-        notes: 'Please clarify recommendations.',
-      );
-      final updated = await DatabaseService().getAssessment(a.id!);
-      expect(updated?.countersignatureStatus, equals('amendment_requested'));
-    });
+    test(
+      'submit requestedAmendment sets status to amendment_requested',
+      () async {
+        final a = await insertHighRiskAssessment();
+        await CountersignatureService.instance.requestCountersignature(a.id!);
+        await CountersignatureService.instance.submitCountersignature(
+          assessment: (await DatabaseService().getAssessment(a.id!))!,
+          signatoryName: 'Dr Amend',
+          signatoryRole: 'Consultant',
+          outcome: CountersignatureOutcome.requestedAmendment,
+          notes: 'Please clarify recommendations.',
+        );
+        final updated = await DatabaseService().getAssessment(a.id!);
+        expect(updated?.countersignatureStatus, equals('amendment_requested'));
+      },
+    );
 
     test('submit requestedAmendment persists amendmentNote', () async {
-      final a = await _insertHighRiskAssessment();
+      final a = await insertHighRiskAssessment();
       await CountersignatureService.instance.requestCountersignature(a.id!);
       await CountersignatureService.instance.submitCountersignature(
         assessment: (await DatabaseService().getAssessment(a.id!))!,
@@ -208,7 +217,7 @@ void main() {
     });
 
     test('requestedAmendment without notes throws ArgumentError', () async {
-      final a = await _insertHighRiskAssessment();
+      final a = await insertHighRiskAssessment();
       expect(
         () => CountersignatureService.instance.submitCountersignature(
           assessment: a,
@@ -253,13 +262,15 @@ void main() {
 
   group('CountersignatureService — queries', () {
     test('getCountersignature returns null before any sign-off', () async {
-      final a = await _insertHighRiskAssessment();
-      final cs = await CountersignatureService.instance.getCountersignature(a.id!);
+      final a = await insertHighRiskAssessment();
+      final cs = await CountersignatureService.instance.getCountersignature(
+        a.id!,
+      );
       expect(cs, isNull);
     });
 
     test('getCountersignature returns record after sign-off', () async {
-      final a = await _insertHighRiskAssessment();
+      final a = await insertHighRiskAssessment();
       await CountersignatureService.instance.requestCountersignature(a.id!);
       await CountersignatureService.instance.submitCountersignature(
         assessment: (await DatabaseService().getAssessment(a.id!))!,
@@ -267,15 +278,17 @@ void main() {
         signatoryRole: 'Consultant',
         outcome: CountersignatureOutcome.approved,
       );
-      final cs = await CountersignatureService.instance.getCountersignature(a.id!);
+      final cs = await CountersignatureService.instance.getCountersignature(
+        a.id!,
+      );
       expect(cs, isNotNull);
       expect(cs!.signatoryName, equals('Dr Verify'));
       expect(cs.outcome, equals(CountersignatureOutcome.approved));
     });
 
     test('pendingSignOffs returns only pending assessments', () async {
-      final high = await _insertHighRiskAssessment();
-      final low = await _insertLowRiskAssessment();
+      final high = await insertHighRiskAssessment();
+      final low = await insertLowRiskAssessment();
 
       await CountersignatureService.instance.requestCountersignature(high.id!);
       // low is not set to pending
@@ -286,7 +299,7 @@ void main() {
     });
 
     test('pendingSignOffs excludes countersigned assessments', () async {
-      final a = await _insertHighRiskAssessment();
+      final a = await insertHighRiskAssessment();
       await CountersignatureService.instance.requestCountersignature(a.id!);
       await CountersignatureService.instance.submitCountersignature(
         assessment: (await DatabaseService().getAssessment(a.id!))!,
@@ -304,19 +317,22 @@ void main() {
   // -------------------------------------------------------------------------
 
   group('CountersignatureService — amendment guard', () {
-    test('applyAmendmentEdits updates doctorNotes and recommendations', () async {
-      final a = await _insertHighRiskAssessment();
-      final updated = CountersignatureService.instance.applyAmendmentEdits(
-        a,
-        doctorNotes: 'Reviewed — capacity maintained.',
-        recommendations: 'Continue monitoring.',
-      );
-      expect(updated.doctorNotes, equals('Reviewed — capacity maintained.'));
-      expect(updated.recommendations, equals('Continue monitoring.'));
-    });
+    test(
+      'applyAmendmentEdits updates doctorNotes and recommendations',
+      () async {
+        final a = await insertHighRiskAssessment();
+        final updated = CountersignatureService.instance.applyAmendmentEdits(
+          a,
+          doctorNotes: 'Reviewed — capacity maintained.',
+          recommendations: 'Continue monitoring.',
+        );
+        expect(updated.doctorNotes, equals('Reviewed — capacity maintained.'));
+        expect(updated.recommendations, equals('Continue monitoring.'));
+      },
+    );
 
     test('applyAmendmentEdits preserves all immutable fields', () async {
-      final a = await _insertHighRiskAssessment();
+      final a = await insertHighRiskAssessment();
       final updated = CountersignatureService.instance.applyAmendmentEdits(
         a,
         doctorNotes: 'New notes',
@@ -337,8 +353,8 @@ void main() {
 
   group('CountersignatureService — convenience helpers', () {
     test('requiresCountersignature delegates to RiskLevel extension', () async {
-      final high = await _insertHighRiskAssessment();
-      final low = await _insertLowRiskAssessment();
+      final high = await insertHighRiskAssessment();
+      final low = await insertLowRiskAssessment();
       expect(
         CountersignatureService.instance.requiresCountersignature(high),
         isTrue,
